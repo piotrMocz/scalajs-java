@@ -1,6 +1,6 @@
 package trees
 
-import com.sun.tools.javac.code.{Symbol, TypeTag}
+import com.sun.tools.javac.code.{Symbol, TypeTag, Type=>JType}
 import com.sun.tools.javac.util.{Name => JName}
 import javax.lang.model.element.Modifier
 import javax.lang.model.`type`.TypeKind
@@ -12,6 +12,7 @@ import com.sun.tools.javac.code.Symbol.MethodSymbol
  * ------- Tree -------------------------------------------------------------------------------
  * -------------------------------------------------------------------------------------------- */
 sealed trait Tree
+
 
 case class CompilationUnit(imports: List[Import],
                            typeDecls: List[Tree]) extends Tree
@@ -48,95 +49,117 @@ case class CatchTree(param: VarDecl,
 /* --------------------------------------------------------------------------------------------
  * ------- Expressions ------------------------------------------------------------------------
  * -------------------------------------------------------------------------------------------- */
-sealed trait Expr extends Tree
+sealed trait Expr extends Tree with ExpressionTree
 
 
 case class LetExpr(defs: List[VarDecl],
-                   expr: Tree) extends Expr
+                   expr: Tree,
+                   tp: Type) extends Expr
 
 
 case class Annotation(annotationType: Tree,
-                      args: List[Expr] /* TODO attribute: Compound */) extends Expr
+                      args: List[Expr], /* TODO attribute: Compound */
+                      tp: Type) extends Expr
 
 
-case class Erroneous(trees: List[Tree]) extends Expr
+case class Erroneous(trees: List[Tree],
+                     tp: Type) extends Expr
 
 
 case class AnnotatedType(annotations: List[Annotation],
-                         underlyingType: Expr) extends Expr
+                         underlyingType: Expr,
+                         tp: Type) extends Expr
 
 
-case class Wildcard(bound: Tree) extends Expr
+case class Wildcard(bound: Tree,
+                    tp: Type) extends Expr
 
 
-case class TypeIntersection(bounds: List[Expr]) extends Expr
+case class TypeIntersection(bounds: List[Expr],
+                            tp: Type) extends Expr
 
 
-case class TypeUnion(alternatives: List[Expr]) extends Expr
+case class TypeUnion(alternatives: List[Expr],
+                     tp: Type) extends Expr
 
 
 case class TypeApply(tpe: Tree,
-                     typeArgs: List[Expr]) extends Expr
+                     typeArgs: List[Expr],
+                     tp: Type) extends Expr
 
 
-case class ArrayTypeTree(elemType: Tree) extends Expr
+case class ArrayTypeTree(elemType: Tree,
+                         tp: Type) extends Expr
 
 
 case class PrimitiveTypeTree(typeKind: TypeKind,
-                             typeTag: TypeTag) extends Expr
+                             typeTag: TypeTag,
+                             tp: Type) extends Expr
 
 
 case class Literal(typeTag: TypeTag,
-                   value: AnyRef) extends Expr
+                   value: AnyRef,
+                   tp: Type) extends Expr
 
 
 case class Ident(symbol: Symbol,
-                 name: Name) extends Expr
+                 name: Name,
+                 tp: Type) extends Expr
 
 
 case class FieldAccess(name: Name,
                        symbol: Symbol,
-                       selected: Expr) extends Expr
+                       selected: Expr,
+                       tp: Type) extends Expr
 
 
 case class ArrayAccess(indexed: Expr,
-                       index: Expr) extends Expr
+                       index: Expr,
+                       tp: Type) extends Expr
 
 
 case class InstanceOf(clazz: Tree,
-                      expr: Expr) extends Expr
+                      expr: Expr,
+                      tp: Type) extends Expr
 
 
 case class TypeCast(clazz: Tree,
-                    expr: Expr) extends Expr
+                    expr: Expr,
+                    tp: Type) extends Expr
 
 
 case class Binary(op: Symbol,
                   left: Expr,
-                  right: Expr) extends Expr
+                  right: Expr,
+                  tp: Type) extends Expr
 
 
 case class Unary(op: Symbol,
-                 arg: Expr) extends Expr
+                 arg: Expr,
+                 tp: Type) extends Expr
 
 
 case class AssignOp(variable: Expr,
                     op: Symbol,
-                    expr: Expr) extends Expr
+                    expr: Expr,
+                    tp: Type) extends Expr
 
 
 case class Assign(variable: Expr,
-                  expr: Expr) extends Expr
+                  expr: Expr,
+                  tp: Type) extends Expr
 
 
-case class Parens(expr: Expr) extends Expr
+case class Parens(expr: Expr,
+                  tp: Type) extends Expr
 
 
 case class NewArray(annotations: List[Annotation],
                     dimAnnotations: List[List[Annotation]],
                     dimensions: List[Expr],
                     initializers: List[Expr],
-                    elemType: Option[Expr]) extends Expr
+                    elemType: Option[Expr],
+                    tp: Type) extends Expr
 
 
 /* --------------------------------------------------------------------------------------------
@@ -147,19 +170,22 @@ sealed trait PolyExpr extends Expr
 
 case class MethodInv(methodSel: Expr,
                      typeArgs: List[Expr],
-                     args: List[Expr]) extends PolyExpr
+                     args: List[Expr],
+                     tp: Type) extends PolyExpr
 
 
 case class Conditional(cond: Expr,
                        trueExpr: Expr,
-                       falseExpr: Expr) extends PolyExpr
+                       falseExpr: Expr,
+                       tp: Type) extends PolyExpr
 
 
 case class NewClass(ident: Expr,
                     typeArgs: List[Expr],
                     args: List[Expr],
                     classBody: Option[ClassDecl],
-                    enclExpr: Option[Expr]) extends PolyExpr
+                    enclExpr: Option[Expr],
+                    tp: Type) extends PolyExpr
 
 /* --------------------------------------------------------------------------------------------
  * ------- Functional expressions -------------------------------------------------------------
@@ -171,18 +197,20 @@ case class MemberRef(name: Name,
                      typeArgs: List[Expr],
                      qualExpr: Expr,
                      mode: ReferenceMode,
-                     polyKind: PolyKind) extends FuncExpr
+                     polyKind: PolyKind,
+                     tp: Type) extends FuncExpr
 
 
 case class Lambda(params: List[VarDecl],
                   body: Tree,
-                  bodyKind: BodyKind) extends FuncExpr
+                  bodyKind: BodyKind,
+                  tp: Type) extends FuncExpr
 
 
 /* --------------------------------------------------------------------------------------------
  * ------- Statements -------------------------------------------------------------------------
  * -------------------------------------------------------------------------------------------- */
-sealed trait Statement extends Tree
+sealed trait Statement extends Tree with StatementTree
 
 
 case class VarDecl(mods: Modifiers,

@@ -218,8 +218,9 @@ object TreeTraverse {
     val cond = traverseExpr(conditional.getCondition)
     val trueE = traverseExpr(conditional.getTrueExpression)
     val falseE = traverseExpr(conditional.getFalseExpression)
+    val tp = JExprType(conditional.`type`)
 
-    Conditional(cond, trueE, falseE)
+    Conditional(cond, trueE, falseE, tp)
   }
 
   def traverseNewClass(newClass: JCTree.JCNewClass): NewClass = {
@@ -228,16 +229,18 @@ object TreeTraverse {
     val classBody = Option(newClass.getClassBody).map(traverseClassDecl)
     val enclExpr = Option(newClass.getEnclosingExpression).map(traverseExpr)
     val ident = traverseExpr(newClass.getIdentifier)
+    val tp = JExprType(newClass.`type`)
 
-    NewClass(ident, typeArgs, args, classBody, enclExpr)
+    NewClass(ident, typeArgs, args, classBody, enclExpr, tp)
   }
 
   def traverseMethodInv(methodInv: JCTree.JCMethodInvocation): MethodInv = {
     val args = methodInv.getArguments.map(traverseExpr).toList
     val methodSel = traverseExpr(methodInv.getMethodSelect)
     val typeArgs = methodInv.getTypeArguments.map(traverseExpr).toList
+    val tp = JExprType(methodInv.`type`)
 
-    MethodInv(methodSel, typeArgs, args)
+    MethodInv(methodSel, typeArgs, args, tp)
   }
 
   /**
@@ -281,8 +284,9 @@ object TreeTraverse {
   private def traverseAnnotation(annot: JCTree.JCAnnotation): Annotation = {
     val annotType = traverse(annot.getAnnotationType)
     val args = annot.getArguments.map(traverseExpr).toList
+    val tp = JExprType(annot.`type`)
 
-    Annotation(annotType, args)
+    Annotation(annotType, args, tp)
   }
 
   private def traverseModifiers(modifiers: JCTree.JCModifiers): Modifiers = {
@@ -314,138 +318,158 @@ object TreeTraverse {
   private def traverseLetExpr(letExpr: JCTree.LetExpr): LetExpr = {
     val defs = letExpr.defs.map(traverseVarDecl).toList
     val expr = traverse(letExpr.expr)
+    val tp = JExprType(letExpr.`type`)
 
-    LetExpr(defs, expr)
+    LetExpr(defs, expr, tp)
   }
 
   private def traverseErroneous(erroneous: JCTree.JCErroneous): Erroneous = {
     val trees = erroneous.getErrorTrees.map(traverse).toList
+    val tp = JExprType(erroneous.`type`)
 
-    Erroneous(trees)
+    Erroneous(trees, tp)
   }
 
   private def traverseAnnotatedType(annType: JCTree.JCAnnotatedType): AnnotatedType = {
     val anns = annType.getAnnotations.map(traverseAnnotation).toList
     val underType = traverseExpr(annType.getUnderlyingType)
+    val tp = JExprType(annType.`type`)
 
-    AnnotatedType(anns, underType)
+    AnnotatedType(anns, underType, tp)
   }
 
   private def traverseWildcard(wildcard: JCTree.JCWildcard): Wildcard = {
     val bound = traverse(wildcard.getBound)
+    val tp = JExprType(wildcard.`type`)
 
-    Wildcard(bound)
+    Wildcard(bound, tp)
   }
 
   private def traverseTypeInter(tInter: JCTree.JCTypeIntersection): TypeIntersection = {
     val bounds = tInter.getBounds.map(traverseExpr).toList
+    val tp = JExprType(tInter.`type`)
 
-    TypeIntersection(bounds)
+    TypeIntersection(bounds, tp)
   }
 
   private def traverseTypeUnion(tUnion: JCTree.JCTypeUnion): TypeUnion = {
     val alternatives = tUnion.getTypeAlternatives.map(traverseExpr).toList
+    val tp = JExprType(tUnion.`type`)
 
-    TypeUnion(alternatives)
+    TypeUnion(alternatives, tp)
   }
 
   private def traverseTypeApply(tApply: JCTree.JCTypeApply): TypeApply = {
     val tpe = traverse(tApply.getType)
     val tArgs = tApply.getTypeArguments.map(traverseExpr).toList
+    val tp = JExprType(tApply.`type`)
 
-    TypeApply(tpe, tArgs)
+    TypeApply(tpe, tArgs, tp)
   }
 
   private def traverseArrayTypeTree(arrTypeTree: JCTree.JCArrayTypeTree): ArrayTypeTree = {
     val elemType = traverse(arrTypeTree.getType)
+    val tp = JExprType(arrTypeTree.`type`)
 
-    ArrayTypeTree(elemType)
+    ArrayTypeTree(elemType, tp)
   }
 
   private def traversePrimitiveTypeTree(primTypeTree: JCTree.JCPrimitiveTypeTree): PrimitiveTypeTree = {
     val typeKind = primTypeTree.getPrimitiveTypeKind
     val typeTag = primTypeTree.typetag
+    val tp = JExprType(primTypeTree.`type`)
 
-    PrimitiveTypeTree(typeKind, typeTag)
+    PrimitiveTypeTree(typeKind, typeTag, tp)
   }
 
   private def traverseLiteral(literal: JCTree.JCLiteral): Literal = {
     val typeTag = literal.typetag
     val value = literal.getValue
+    val tp = JExprType(literal.`type`)
 
-    Literal(typeTag, value)
+    Literal(typeTag, value, tp)
   }
 
   private def traverseIdent(ident: JCTree.JCIdent): Ident = {
     val symbol = ident.sym
     val name = Name.fromJName(ident.getName)
+    val tp = JExprType(ident.`type`)
 
-    Ident(symbol, name)
+    Ident(symbol, name, tp)
   }
 
   private def traverseFieldAccess(fieldAccess: JCTree.JCFieldAccess): FieldAccess = {
     val name = Name.fromJName(fieldAccess.getIdentifier)
     val selected = traverseExpr(fieldAccess.getExpression)
     val symbol = fieldAccess.sym
+    val tp = JExprType(fieldAccess.`type`)
 
-    FieldAccess(name, symbol, selected)
+    FieldAccess(name, symbol, selected, tp)
   }
 
   private def traverseArrayAccess(arrayAccess: JCTree.JCArrayAccess): ArrayAccess = {
     val indexed = traverseExpr(arrayAccess.getExpression)
     val index = traverseExpr(arrayAccess.getIndex)
+    val tp = JExprType(arrayAccess.`type`)
 
-    ArrayAccess(indexed, index)
+    ArrayAccess(indexed, index, tp)
   }
 
   private def traverseInstanceOf(instOf: JCTree.JCInstanceOf): InstanceOf = {
     val clazz = traverse(instOf.getType)
     val expr = traverseExpr(instOf.getExpression)
+    val tp = JExprType(instOf.`type`)
 
-    InstanceOf(clazz, expr)
+    InstanceOf(clazz, expr, tp)
   }
 
   private def traverseTypeCast(typeCast: JCTree.JCTypeCast): TypeCast = {
     val clazz  = traverse(typeCast.getType)
     val expr = traverseExpr(typeCast.getExpression)
+    val tp = JExprType(typeCast.`type`)
 
-    TypeCast(clazz, expr)
+    TypeCast(clazz, expr, tp)
   }
 
   private def traverseBinary(binary: JCTree.JCBinary): Binary = {
     val op = binary.getOperator
     val left = traverseExpr(binary.getLeftOperand)
     val right = traverseExpr(binary.getRightOperand)
+    val tp = JExprType(binary.`type`)
 
-    Binary(op, left, right)
+    Binary(op, left, right, tp)
   }
 
   private def traverseUnary(unary: JCTree.JCUnary): Unary = {
     val op = unary.getOperator
     val arg = traverseExpr(unary.getExpression)
+    val tp = JExprType(unary.`type`)
 
-    Unary(op, arg)
+    Unary(op, arg, tp)
   }
 
   private def traverseAssignOp(assignOp: JCTree.JCAssignOp): AssignOp = {
     val variable = traverseExpr(assignOp.getVariable)
     val op = assignOp.getOperator
     val expr = traverseExpr(assignOp.getExpression)
+    val tp = JExprType(assignOp.`type`)
 
-    AssignOp(variable, op, expr)
+    AssignOp(variable, op, expr, tp)
   }
 
   private def traverseAssign(assign: JCTree.JCAssign): Assign = {
     val variable = traverseExpr(assign.getVariable)
     val expr = traverseExpr(assign.getExpression)
+    val tp = JExprType(assign.`type`)
 
-    Assign(variable, expr)
+    Assign(variable, expr, tp)
   }
 
   private def traverseParens(parens: JCTree.JCParens): Parens = {
     val expr = traverseExpr(parens.getExpression)
+    val tp = JExprType(parens.`type`)
 
-    Parens(expr)
+    Parens(expr, tp)
   }
 
   private def traverseNewArray(newArray: JCTree.JCNewArray): NewArray = {
@@ -454,8 +478,9 @@ object TreeTraverse {
     val dimensions = newArray.getDimensions.map(traverseExpr).toList
     // TODO val initializers = newArray.getInitializers.map(traverseExpr).toList
     val elType = Option(newArray.getType).map(traverseExpr)
+    val tp = JExprType(newArray.`type`)
 
-    NewArray(annotations, dimAnnotations, dimensions, null, elType)
+    NewArray(annotations, dimAnnotations, dimensions, null, elType, tp)
   }
 
   private def traverseAssert(assert: JCTree.JCAssert): Assert = {
@@ -592,15 +617,17 @@ object TreeTraverse {
     val qualExpr = traverseExpr(memberRef.getQualifierExpression)
     val mode = if (memberRef.getMode == MemberReferenceTree.ReferenceMode.INVOKE) Invoke else New
     val polyKind = if (memberRef.isPoly) Poly else Standalone
+    val tp = JExprType(memberRef.`type`)
 
-    MemberRef(name, typeArgs, qualExpr, mode, polyKind)
+    MemberRef(name, typeArgs, qualExpr, mode, polyKind, tp)
   }
 
   private def traverseLambda(lambda: JCTree.JCLambda): Lambda = {
     val body = traverse(lambda.getBody)
     val bodyKind = if (lambda.getBodyKind == BodyKind.EXPRESSION) ExpressionKind else StatementKind
     val params = lambda.params.map(traverseVarDecl).toList
+    val tp = JExprType(lambda.`type`)
 
-    Lambda(params, body, bodyKind)
+    Lambda(params, body, bodyKind, tp)
   }
 }
