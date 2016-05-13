@@ -479,16 +479,14 @@ object TreeTraverse {
 
   private def traverseContinue(contStmt: JCTree.JCContinue): Continue = {
     val label = Option(contStmt.getLabel).map(Name.fromJName)
-    val target = Option(contStmt.target).map(traverse)
 
-    Continue(label, target)
+    Continue(label)
   }
 
   private def traverseBreak(breakStmt: JCTree.JCBreak): Break = {
     val label = Option(breakStmt.getLabel).map(Name.fromJName)
-    val target = Option(breakStmt.target).map(traverse)
 
-    Break(label, target)
+    Break(label)
   }
 
   private def traverseExprStmt(exprStmt: JCTree.JCExpressionStatement): ExprStatement = {

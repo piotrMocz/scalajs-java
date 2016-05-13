@@ -19,7 +19,9 @@ import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.List;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -48,16 +50,28 @@ public class CompilerInterface {
         this.javaFileManager = context.get(StandardJavaFileManager.class);
         this.compiler = JavaCompiler.instance(context);
         this.compiler.attrParseOnly = true;
-        this.compiler.verbose = false;
+        this.compiler.verbose = true;
         this.compiler.genEndPos = true;
         this.compiler.keepComments = true;
+
+        try(PrintWriter pw = new PrintWriter("loggg.txt")) {
+            this.compiler.log.setWriter(WriterKind.ERROR, pw);
+        } catch (FileNotFoundException ex) {
+            System.err.println("Compiler log file not found.");
+        }
     }
 
     public void compile(String filename) {
         JavaFileObject jfo = new SourceObject(filename);
+        ArrayList<JavaFileObject> jfObjects = new ArrayList<JavaFileObject>();
+        jfObjects.add(jfo);
 
-        this.compilationUnit = compiler.parse(jfo);
+        List<JCCompilationUnit> compilationUnits =
+                compiler.enterTrees(compiler.parseFiles(jfObjects));
+
+        // this performs the typechecking:
         this.attrs = compiler.attribute(compiler.todo);
+        this.compilationUnit = compilationUnits.head;
     }
 
     public void printEnvs() {

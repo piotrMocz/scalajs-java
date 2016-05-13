@@ -208,12 +208,10 @@ case class Throw(expr: Expr) extends Statement
 case class Return(expr: Expr) extends Statement
 
 
-case class Continue(label: Option[Name],
-                    target: Option[Tree]) extends Statement
+case class Continue(label: Option[Name]) extends Statement
 
 
-case class Break(label: Option[Name],
-                 target: Option[Tree]) extends Statement
+case class Break(label: Option[Name]) extends Statement
 
 
 case class ExprStatement(expr: Expr) extends Statement
@@ -295,4 +293,5 @@ case object New extends ReferenceMode
 sealed trait BodyKind
 case object StatementKind extends BodyKind
 case object ExpressionKind extends BodyKind
+
 

@@ -3,18 +3,23 @@ import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.List;
 
 import javax.lang.model.element.Modifier;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.LinkedList;
-
 
 public class JTreeVisitor extends JCTree.Visitor {
 
     private LinkedList<JCTree> stack;
     private int indent;
+    private boolean verbose;
+//    private PrintWriter pw;
 
-    public JTreeVisitor() {
+    public JTreeVisitor(boolean verbose) /* throws FileNotFoundException */ {
         super();
         this.stack = new LinkedList<JCTree>();
         this.indent = 0;
+        this.verbose = verbose;
+//        this.pw = new PrintWriter("ast.log");
     }
 
     private void push(JCTree tree) {
@@ -37,9 +42,23 @@ public class JTreeVisitor extends JCTree.Visitor {
         this.indent -= 1;
     }
 
+    private void printType(JCTree tree) {
+        if (tree instanceof JCTree.JCExpression &&
+                tree.type != null)
+            printInd("TYPE: " + tree.type.toString());
+    }
+
     private void acceptOpt(JCTree tree) {
         if (tree != null) {
             indent();
+
+            printType(tree);
+
+            if (tree.getTag() != null && verbose)
+                printInd("(tag: " + tree.getTag().toString() + ")");
+
+            if (tree.getKind() != null && verbose)
+                printInd("(kind: " + tree.getKind().toString() + ")");
 
             tree.accept(this);
 
@@ -57,31 +76,28 @@ public class JTreeVisitor extends JCTree.Visitor {
     }
 
     private void printInd(String s) {
-        System.out.println(mkIndent() + s);
+         System.out.println(mkIndent() + s);
+//        this.pw.println(mkIndent() + s);
+//        this.pw.flush();
     }
 
     @Override
     public void visitTopLevel(JCTree.JCCompilationUnit that) {
-        // super.visitTopLevel(that);
-        printInd("JCCompilationUnit");
+                printInd("JCCompilationUnit");
 
         indent();
 
         printInd("imports:");
         acceptOpt(that.getImports());
-//            imp.accept(this);
 
         printInd("type decls:");
         acceptOpt(that.getTypeDecls());
-//        for (JCTree td : that.getTypeDecls())
-//            td.accept(this);
 
         unindent();
     }
 
     @Override
     public void visitImport(JCTree.JCImport that) {
-//        super.visitImport(that);
         printInd("JCImport");
         indent();
 
@@ -92,7 +108,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitClassDef(JCTree.JCClassDecl that) {
-//        super.visitClassDef(that);
         printInd("JCClassDecl");
 
         indent();
@@ -119,7 +134,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitMethodDef(JCTree.JCMethodDecl that) {
-//        super.visitMethodDef(that);
         printInd("JCMethodDecl");
 
         printInd("Name: " + that.getName());
@@ -149,9 +163,8 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitVarDef(JCTree.JCVariableDecl that) {
-//        super.visitVarDef(that);
         printInd("JCVariableDecl");
-        printInd("Name" + that.getName());
+        printInd("Name: " + that.getName());
 
         indent();
 
@@ -172,13 +185,11 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitSkip(JCTree.JCSkip that) {
-//        super.visitSkip(that);
         printInd("JCSkip");
     }
 
     @Override
     public void visitBlock(JCTree.JCBlock that) {
-//        super.visitBlock(that);
         printInd("JCBlock");
 
         indent();
@@ -193,7 +204,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitDoLoop(JCTree.JCDoWhileLoop that) {
-//        super.visitDoLoop(that);
         printInd("JCDoWhileLoop");
 
         indent();
@@ -209,7 +219,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitWhileLoop(JCTree.JCWhileLoop that) {
-//        super.visitWhileLoop(that);
         printInd("JCWhileLoop");
 
         indent();
@@ -225,23 +234,18 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitForLoop(JCTree.JCForLoop that) {
-//        super.visitForLoop(that);
         printInd("JCForLoop");
 
         indent();
 
         printInd("initializer:");
         acceptOpt(that.getInitializer());
-//        for (JCTree.JCStatement stm: that.getInitializer())
-//            stm.accept(this);
 
         printInd("condition:");
         acceptOpt(that.getCondition());
 
         printInd("update:");
         acceptOpt(that.getUpdate());
-//        for (JCTree.JCStatement stm : that.getUpdate())
-//            stm.accept(this);
 
         printInd("statement:");
         acceptOpt(that.getStatement());
@@ -251,7 +255,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitForeachLoop(JCTree.JCEnhancedForLoop that) {
-//        super.visitForeachLoop(that);
         printInd("JCEnhancedForLoop");
 
         indent();
@@ -270,7 +273,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitLabelled(JCTree.JCLabeledStatement that) {
-//        super.visitLabelled(that);
         printInd("JCLabeledStatement");
 
         indent();
@@ -285,7 +287,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitSwitch(JCTree.JCSwitch that) {
-//        super.visitSwitch(that);
         printInd("JCSwitch");
 
         indent();
@@ -295,15 +296,12 @@ public class JTreeVisitor extends JCTree.Visitor {
 
         printInd("cases:");
         acceptOpt(that.getCases());
-//        for (JCTree.JCCase cas : that.getCases())
-//            cas.accept(this);
 
         unindent();
     }
 
     @Override
     public void visitCase(JCTree.JCCase that) {
-//        super.visitCase(that);
         printInd("JCCase");
 
         indent();
@@ -313,15 +311,12 @@ public class JTreeVisitor extends JCTree.Visitor {
 
         printInd("statements:");
         acceptOpt(that.getStatements());
-//        for (JCTree.JCStatement stm : that.getStatements())
-//            stm.accept(this);
 
         unindent();
     }
 
     @Override
     public void visitSynchronized(JCTree.JCSynchronized that) {
-//        super.visitSynchronized(that);
         printInd("JCSynchronized");
 
         indent();
@@ -337,14 +332,12 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitTry(JCTree.JCTry that) {
-//        super.visitTry(that);
         printInd("JCTry");
 
         indent();
 
         printInd("resources");
-        for (JCTree jct : that.getResources())
-            jct.accept(this);
+        acceptOpt(that.getResources());
 
         printInd("block:");
         acceptOpt(that.getBlock());
@@ -360,7 +353,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitCatch(JCTree.JCCatch that) {
-//        super.visitCatch(that);
         printInd("JCCatch");
 
         indent();
@@ -376,7 +368,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitConditional(JCTree.JCConditional that) {
-//        super.visitConditional(that);
         printInd("JCConditional");
 
         indent();
@@ -395,7 +386,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitIf(JCTree.JCIf that) {
-//        super.visitIf(that);
         printInd("JCIf");
 
         indent();
@@ -414,7 +404,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitExec(JCTree.JCExpressionStatement that) {
-//        super.visitExec(that);
         printInd("JCExprStmt");
 
         indent();
@@ -427,7 +416,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitBreak(JCTree.JCBreak that) {
-//        super.visitBreak(that);
         printInd("JCBreak");
 
         indent();
@@ -435,15 +423,14 @@ public class JTreeVisitor extends JCTree.Visitor {
         printInd("label:");
         printInd((that.getLabel() != null) ? that.getLabel().toString() : "no label");
 
-        printInd("target:");
-        acceptOpt(that.target);
-
+//        printInd("target:");
+//        acceptOpt(that.target);
+//
         unindent();
     }
 
     @Override
     public void visitContinue(JCTree.JCContinue that) {
-//        super.visitContinue(that);
         printInd("JCContinue");
 
         indent();
@@ -451,15 +438,14 @@ public class JTreeVisitor extends JCTree.Visitor {
         printInd("label:");
         printInd((that.getLabel() != null) ? that.getLabel().toString() : "no label");
 
-        printInd("target:");
-        acceptOpt(that.target);
+//        printInd("target:");
+//        acceptOpt(that.target);
 
         unindent();
     }
 
     @Override
     public void visitReturn(JCTree.JCReturn that) {
-//        super.visitReturn(that);
         printInd("JCReturn");
 
         indent();
@@ -472,7 +458,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitThrow(JCTree.JCThrow that) {
-//        super.visitThrow(that);
         printInd("JCThrow");
 
         indent();
@@ -485,7 +470,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitAssert(JCTree.JCAssert that) {
-//        super.visitAssert(that);
         printInd("JCAssert");
 
         indent();
@@ -501,7 +485,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitApply(JCTree.JCMethodInvocation that) {
-//        super.visitApply(that);
         printInd("JCMethodInv");
 
         indent();
@@ -517,7 +500,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitNewClass(JCTree.JCNewClass that) {
-//        super.visitNewClass(that);
         printInd("JCNewClass");
 
         indent();
@@ -536,7 +518,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitNewArray(JCTree.JCNewArray that) {
-//        super.visitNewArray(that);
         printInd("JCNewArray");
 
         indent();
@@ -556,7 +537,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitLambda(JCTree.JCLambda that) {
-//        super.visitLambda(that);
         printInd("JCLambda");
 
         indent();
@@ -575,7 +555,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitParens(JCTree.JCParens that) {
-//        super.visitParens(that);
         printInd("JCParens");
 
         indent();
@@ -588,7 +567,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitAssign(JCTree.JCAssign that) {
-//        super.visitAssign(that);
         printInd("JCAssign");
 
         indent();
@@ -604,7 +582,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitAssignop(JCTree.JCAssignOp that) {
-//        super.visitAssignop(that);
         printInd("JCAssignOp");
 
         indent();
@@ -623,7 +600,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitUnary(JCTree.JCUnary that) {
-//        super.visitUnary(that);
         printInd("JCUnary");
 
         indent();
@@ -639,7 +615,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitBinary(JCTree.JCBinary that) {
-//        super.visitBinary(that);
         printInd("JCBinary");
 
         indent();
@@ -658,7 +633,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitTypeCast(JCTree.JCTypeCast that) {
-//        super.visitTypeCast(that);
         printInd("JCTypeCast");
 
         indent();
@@ -674,13 +648,9 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitTypeTest(JCTree.JCInstanceOf that) {
-//        super.visitTypeTest(that);
         printInd("JCInstanceOf");
 
         indent();
-
-        printInd("type:");
-        acceptOpt(that.getType());
 
         printInd("type:");
         acceptOpt(that.getType());
@@ -693,7 +663,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitIndexed(JCTree.JCArrayAccess that) {
-//        super.visitIndexed(that);
         printInd("JCArrayAccess");
 
         indent();
@@ -709,7 +678,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitSelect(JCTree.JCFieldAccess that) {
-//        super.visitSelect(that);
         printInd("JCFieldAccess");
 
         indent();
@@ -724,7 +692,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitReference(JCTree.JCMemberReference that) {
-//        super.visitReference(that);
         printInd("JCMemberReference");
 
         indent();
@@ -744,7 +711,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitIdent(JCTree.JCIdent that) {
-//        super.visitIdent(that);
         printInd("JCIdent");
 
         indent();
@@ -759,7 +725,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitLiteral(JCTree.JCLiteral that) {
-//        super.visitLiteral(that);
         printInd("JCLiteral");
 
         indent();
@@ -772,7 +737,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitTypeIdent(JCTree.JCPrimitiveTypeTree that) {
-//        super.visitTypeIdent(that);
         printInd("JCPrimitiveTypeTree");
 
         indent();
@@ -785,7 +749,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitTypeArray(JCTree.JCArrayTypeTree that) {
-//        super.visitTypeArray(that);
         printInd("JCArrayTypeTree");
 
         indent();
@@ -798,7 +761,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitTypeApply(JCTree.JCTypeApply that) {
-//        super.visitTypeApply(that);
         printInd("JCTypeApply");
 
         indent();
@@ -814,7 +776,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitTypeUnion(JCTree.JCTypeUnion that) {
-//        super.visitTypeUnion(that);
         printInd("JCTypeUnion");
 
         indent();
@@ -827,7 +788,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitTypeIntersection(JCTree.JCTypeIntersection that) {
-//        super.visitTypeIntersection(that);
         printInd("JCTypeIntersection");
 
         indent();
@@ -840,7 +800,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitTypeParameter(JCTree.JCTypeParameter that) {
-//        super.visitTypeParameter(that);
         printInd("JCTypeParameter");
 
         indent();
@@ -859,7 +818,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitWildcard(JCTree.JCWildcard that) {
-//        super.visitWildcard(that);
         printInd("JCWildcard");
 
         indent();
@@ -872,7 +830,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitTypeBoundKind(JCTree.TypeBoundKind that) {
-//        super.visitTypeBoundKind(that);
         printInd("TypeBoundKind");
 
         indent();
@@ -884,7 +841,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitAnnotation(JCTree.JCAnnotation that) {
-//        super.visitAnnotation(that);
         printInd("JCAnnotation");
 
         indent();
@@ -900,7 +856,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitModifiers(JCTree.JCModifiers that) {
-//        super.visitModifiers(that);
         printInd("JCModifiers");
 
         indent();
@@ -919,7 +874,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitAnnotatedType(JCTree.JCAnnotatedType that) {
-//        super.visitAnnotatedType(that);
         printInd("JCAnnotatedType");
 
         indent();
@@ -935,7 +889,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitErroneous(JCTree.JCErroneous that) {
-//        super.visitErroneous(that);
         printInd("JCErroneous");
 
         indent();
@@ -948,7 +901,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitLetExpr(JCTree.LetExpr that) {
-//        super.visitLetExpr(that);
         printInd("LetExpr");
 
         indent();
@@ -964,7 +916,6 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     @Override
     public void visitTree(JCTree that) {
-//        super.visitTree(that);
         printInd("JCTree");
     }
 }
