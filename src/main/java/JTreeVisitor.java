@@ -54,6 +54,8 @@ public class JTreeVisitor extends JCTree.Visitor {
 
             printType(tree);
 
+            printInd("(pos: " + tree.getStartPosition() + ")");
+
             if (tree.getTag() != null && verbose)
                 printInd("(tag: " + tree.getTag().toString() + ")");
 

@@ -11,18 +11,19 @@ import com.sun.tools.javac.code.Symbol.MethodSymbol
 /* --------------------------------------------------------------------------------------------
  * ------- Tree -------------------------------------------------------------------------------
  * -------------------------------------------------------------------------------------------- */
-sealed trait Tree
+sealed trait Tree {
+  implicit val pos: Position
+}
 
 
 case class CompilationUnit(imports: List[Import],
-                           typeDecls: List[Tree]) extends Tree
+                           typeDecls: List[Tree])(implicit val pos: Position) extends Tree
 
-
-case class Import(qualifiedIdent: Tree) extends Tree
+case class Import(qualifiedIdent: Tree)(implicit val pos: Position) extends Tree
 
 
 case class Modifiers(flags: Set[Modifier],
-                     annotations: List[Annotation]) extends Tree
+                     annotations: List[Annotation])(implicit val pos: Position) extends Tree
 
 
 case class MethodDecl(name: Name,
@@ -34,16 +35,16 @@ case class MethodDecl(name: Name,
                       thrown: List[Expr],
                       retType: Option[Tree],
                       body: Block,
-                      defVal: Option[Expr]) extends Tree
+                      defVal: Option[Expr])(implicit val pos: Position) extends Tree
 
 
 case class TypeParam(name: Name,
                      bounds: List[Expr],
-                     annotations: List[Annotation]) extends Tree
+                     annotations: List[Annotation])(implicit val pos: Position) extends Tree
 
 
 case class CatchTree(param: VarDecl,
-                     body: Block) extends Tree
+                     body: Block)(implicit val pos: Position) extends Tree
 
 
 /* --------------------------------------------------------------------------------------------
@@ -54,104 +55,131 @@ sealed trait Expr extends Tree with ExpressionTree
 
 case class LetExpr(defs: List[VarDecl],
                    expr: Tree,
-                   tp: Type) extends Expr
+                   tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class Annotation(annotationType: Tree,
                       args: List[Expr], /* TODO attribute: Compound */
-                      tp: Type) extends Expr
+                      tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class Erroneous(trees: List[Tree],
-                     tp: Type) extends Expr
+                     tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class AnnotatedType(annotations: List[Annotation],
                          underlyingType: Expr,
-                         tp: Type) extends Expr
+                         tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class Wildcard(bound: Tree,
-                    tp: Type) extends Expr
+                    tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class TypeIntersection(bounds: List[Expr],
-                            tp: Type) extends Expr
+                            tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class TypeUnion(alternatives: List[Expr],
-                     tp: Type) extends Expr
+                     tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class TypeApply(tpe: Tree,
                      typeArgs: List[Expr],
-                     tp: Type) extends Expr
+                     tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class ArrayTypeTree(elemType: Tree,
-                         tp: Type) extends Expr
+                         tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class PrimitiveTypeTree(typeKind: TypeKind,
                              typeTag: TypeTag,
-                             tp: Type) extends Expr
+                             tp: Type)(implicit val pos: Position) extends Expr
 
 
-case class Literal(typeTag: TypeTag,
-                   value: AnyRef,
-                   tp: Type) extends Expr
+// literals:
+sealed trait Literal extends Expr
+
+
+case class BooleanLiteral(value: Boolean,
+                          tp: Type)(implicit val pos: Position) extends Literal
+
+
+case class CharLiteral(value: Char,
+                       tp: Type)(implicit val pos: Position) extends Literal
+
+
+case class IntLiteral(value: Int,
+                      tp: Type)(implicit val pos: Position) extends Literal
+
+
+case class LongLiteral(value: Long,
+                       tp: Type)(implicit val pos: Position) extends Literal
+
+
+case class FloatLiteral(value: Float,
+                        tp: Type)(implicit val pos: Position) extends Literal
+
+
+case class DoubleLiteral(value: Double,
+                         tp: Type)(implicit val pos: Position) extends Literal
+
+
+case class ClassLiteral(value: Any,
+                        tp: Type)(implicit val pos: Position) extends Literal
 
 
 case class Ident(symbol: Symbol,
                  name: Name,
-                 tp: Type) extends Expr
+                 tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class FieldAccess(name: Name,
                        symbol: Symbol,
                        selected: Expr,
-                       tp: Type) extends Expr
+                       tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class ArrayAccess(indexed: Expr,
                        index: Expr,
-                       tp: Type) extends Expr
+                       tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class InstanceOf(clazz: Tree,
                       expr: Expr,
-                      tp: Type) extends Expr
+                      tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class TypeCast(clazz: Tree,
                     expr: Expr,
-                    tp: Type) extends Expr
+                    tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class Binary(op: Symbol,
                   left: Expr,
                   right: Expr,
-                  tp: Type) extends Expr
+                  tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class Unary(op: Symbol,
                  arg: Expr,
-                 tp: Type) extends Expr
+                 tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class AssignOp(variable: Expr,
                     op: Symbol,
                     expr: Expr,
-                    tp: Type) extends Expr
+                    tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class Assign(variable: Expr,
                   expr: Expr,
-                  tp: Type) extends Expr
+                  tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class Parens(expr: Expr,
-                  tp: Type) extends Expr
+                  tp: Type)(implicit val pos: Position) extends Expr
 
 
 case class NewArray(annotations: List[Annotation],
@@ -159,7 +187,7 @@ case class NewArray(annotations: List[Annotation],
                     dimensions: List[Expr],
                     initializers: List[Expr],
                     elemType: Option[Expr],
-                    tp: Type) extends Expr
+                    tp: Type)(implicit val pos: Position) extends Expr
 
 
 /* --------------------------------------------------------------------------------------------
@@ -171,13 +199,13 @@ sealed trait PolyExpr extends Expr
 case class MethodInv(methodSel: Expr,
                      typeArgs: List[Expr],
                      args: List[Expr],
-                     tp: Type) extends PolyExpr
+                     tp: Type)(implicit val pos: Position) extends PolyExpr
 
 
 case class Conditional(cond: Expr,
                        trueExpr: Expr,
                        falseExpr: Expr,
-                       tp: Type) extends PolyExpr
+                       tp: Type)(implicit val pos: Position) extends PolyExpr
 
 
 case class NewClass(ident: Expr,
@@ -185,7 +213,7 @@ case class NewClass(ident: Expr,
                     args: List[Expr],
                     classBody: Option[ClassDecl],
                     enclExpr: Option[Expr],
-                    tp: Type) extends PolyExpr
+                    tp: Type)(implicit val pos: Position) extends PolyExpr
 
 /* --------------------------------------------------------------------------------------------
  * ------- Functional expressions -------------------------------------------------------------
@@ -198,13 +226,13 @@ case class MemberRef(name: Name,
                      qualExpr: Expr,
                      mode: ReferenceMode,
                      polyKind: PolyKind,
-                     tp: Type) extends FuncExpr
+                     tp: Type)(implicit val pos: Position) extends FuncExpr
 
 
 case class Lambda(params: List[VarDecl],
                   body: Tree,
                   bodyKind: BodyKind,
-                  tp: Type) extends FuncExpr
+                  tp: Type)(implicit val pos: Position) extends FuncExpr
 
 
 /* --------------------------------------------------------------------------------------------
@@ -217,85 +245,85 @@ case class VarDecl(mods: Modifiers,
                    name: Name,
                    nameExpr: Option[Expr],
                    varType: Tree,
-                   init: Option[Expr] /* TODO sym: Symbol.VarSymbol */) extends Statement
+                   init: Option[Expr] /* TODO sym: Symbol.VarSymbol */)(implicit val pos: Position) extends Statement
 
 
 case class ClassDecl(typeParams: List[TypeParam],
                      extendsCl: Option[Expr],
                      implementsCl: List[Expr],
-                     members: List[Tree]) extends Statement
+                     members: List[Tree])(implicit val pos: Position) extends Statement
 
 
 case class Assert(cond: Expr,
-                  detail: Expr) extends Statement
+                  detail: Expr)(implicit val pos: Position) extends Statement
 
 
-case class Throw(expr: Expr) extends Statement
+case class Throw(expr: Expr)(implicit val pos: Position) extends Statement
 
 
-case class Return(expr: Expr) extends Statement
+case class Return(expr: Expr)(implicit val pos: Position) extends Statement
 
 
-case class Continue(label: Option[Name]) extends Statement
+case class Continue(label: Option[Name])(implicit val pos: Position) extends Statement
 
 
-case class Break(label: Option[Name]) extends Statement
+case class Break(label: Option[Name])(implicit val pos: Position) extends Statement
 
 
-case class ExprStatement(expr: Expr) extends Statement
+case class ExprStatement(expr: Expr)(implicit val pos: Position) extends Statement
 
 
 case class If(cond: Expr,
               thenStmt: Statement,
-              elseStmt: Option[Statement]) extends Statement
+              elseStmt: Option[Statement])(implicit val pos: Position) extends Statement
 
 
 case class Block(statements: List[Statement],
-                 isStatic: Boolean) extends Statement
+                 isStatic: Boolean)(implicit val pos: Position) extends Statement
 
 
 case class TryStmt(resources: List[Tree],
                    body: Block,
                    catches: List[CatchTree],
-                   finallyBlk: Option[Block]) extends Statement
+                   finallyBlk: Option[Block])(implicit val pos: Position) extends Statement
 
 
-case object Skip extends Statement
+case class Skip(implicit val pos: Position) extends Statement
 
 
 case class Case(pat: Expr,
-                statements: List[Statement]) extends Statement
+                statements: List[Statement])(implicit val pos: Position) extends Statement
 
 
 case class Switch(selector: Expr,
-                  cases: List[Case]) extends Statement
+                  cases: List[Case])(implicit val pos: Position) extends Statement
 
 
 case class Synchronized(lock: Expr,
-                        body: Block) extends Statement
+                        body: Block)(implicit val pos: Position) extends Statement
 
 
 case class LabeledStmt(label: Name,
-                       body: Statement) extends Statement
+                       body: Statement)(implicit val pos: Position) extends Statement
 
 
 case class EnhancedForLoop(variable: VarDecl,
                            expr: Expr,
-                           body: Statement) extends Statement
+                           body: Statement)(implicit val pos: Position) extends Statement
 
 
 case class ForLoop(init: List[Statement],
                    cond: Option[Expr],
                    update: List[ExprStatement],
-                   body: Statement) extends Statement
+                   body: Statement)(implicit val pos: Position) extends Statement
 
 
 case class WhileLoop(cond: Expr,
-                     body: Statement) extends Statement
+                     body: Statement)(implicit val pos: Position) extends Statement
 
 
 case class DoWhileLoop(cond: Expr,
-                       body: Statement) extends Statement
+                       body: Statement)(implicit val pos: Position) extends Statement
 
 
 /* --------------------------------------------------------------------------------------------
@@ -307,6 +335,7 @@ case object Name {
   def fromJName(jname: JName) = Name(jname.toString)
 }
 
+case class Position(line: Int)
 
 sealed trait PolyKind
 case object Standalone extends PolyKind
