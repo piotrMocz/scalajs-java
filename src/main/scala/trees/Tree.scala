@@ -228,6 +228,9 @@ case class Name(str: String)
 
 case object Name {
   def fromJName(jname: JName) = Name(jname.toString)
+
+  implicit def nameToString(name: Name): String =
+    name.str
 }
 
 case class Position(line: Int)
