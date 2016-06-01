@@ -31,6 +31,11 @@ object Main {
 
     println("---------------------------- ENV -------------------------")
     compiler.printEnvs()
+
+    println()
+    println("---------------------------- IR  -------------------------")
+    val ir = Compiler.compile(tree)
+    println(ir.toString)
   }
 
   private def compileAndRun(tree: Tree): Unit = {

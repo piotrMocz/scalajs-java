@@ -1,10 +1,11 @@
 
 import com.sun.tools.javac.code.TypeTag
-import com.sun.tools.javac.code.{Type=>JType}
+import com.sun.tools.javac.code.{Type => JType}
 import org.scalajs.core.ir
 import ir.{Position, Trees => irt, Types => irtpe}
 import ir.Definitions._
 import trees._
+import utils.Mangler
 
 /** Main compiler.
   */
@@ -72,21 +73,26 @@ object Compiler {
       false
   }
 
-  def compileConstructor(constructor: Tree, classType: irtpe.ClassType): irt.MethodDef = {
-    constructor match {
-      case constructor: MethodDecl =>
-        implicit val pos = getPosition(constructor)
-        val ident = irt.Ident("init__", Some("<init>__"))
-        val args = constructor.params.map(compileParam)
-        val tp = irtpe.NoType
-        val body = compileBlock(constructor.body)
+  // TODO
+  def compileConstructors(classDecl: ClassDecl): List[irt.MethodDef] = ???
 
-        irt.MethodDef(static = false, ident, args, tp, body)(
-          irt.OptimizerHints.empty, None)
+  // for now we'll only handle default constructor
+  def compileDefaultConstructor(classDecl: ClassDecl): irt.MethodDef = {
+    implicit val pos = getPosition(classDecl)
+    val ident = irt.Ident("init__", Some("<init>__"))
+    val tp = irtpe.NoType
+    val className = encodeClassName(classDecl.name)
+    val classType = irtpe.ClassType(className)
 
-      case _ =>
-        throw new Exception("[compileConstructor] Not a constructor")
-    }
+    irt.MethodDef(static = false,
+      irt.Ident("init___", Some("<init>")), Nil, irtpe.NoType,
+      irt.Block(List(
+        irt.ApplyStatically(irt.This()(classType),
+          irtpe.ClassType(ObjectClass),
+          irt.Ident("init___", Some("<init>")),
+          Nil)(
+          irtpe.NoType))))(
+      irt.OptimizerHints.empty, None)
   }
 
   def compilePrimitiveType(tTag: TypeTag): irtpe.Type = tTag match {
@@ -116,14 +122,15 @@ object Compiler {
 
   def compileParam(param: VarDecl): irt.ParamDef = {
     implicit val pos = getPosition(param)
-    val name = irt.Ident(param.name)
-    // val varType = compileType(param.varType)
-    null
+    val name = irt.Ident(param.name) // TODO mangle
+    val ptpe = compileType(param.varType)
+
+    irt.ParamDef(name, ptpe, mutable = true, rest = false)
   }
 
   def compileMethodDecl(methodDecl: MethodDecl): irt.MethodDef = {
     implicit val pos = getPosition(methodDecl)
-    val name = irt.Ident(methodDecl.name)
+    val name = irt.Ident(Mangler.mangleMethodName(methodDecl))
     val retType = methodDecl.retType.map(compileType).getOrElse(irtpe.NoType)
     val params = methodDecl.params.map(compileParam)
     val body = compileTree(methodDecl.body)
@@ -143,10 +150,12 @@ object Compiler {
     val className = encodeClassName(classDecl.name)
     val classType = irtpe.ClassType(className)
 
-    val ctorsAndMembers = classDecl.members.partition(isConstructor)
-    val ctorDefs = ctorsAndMembers._1.map(compileConstructor(_, classType))
-    val memberDefs = ctorsAndMembers._2.map(compileTree)
-    val allDefs = ctorDefs ++ memberDefs
+    // TODO only default constructor is compiled right now
+    val ctorDef = compileDefaultConstructor(classDecl)
+    val memberDefs = classDecl.members
+        .filter(!isConstructor(_)).map(compileTree)
+
+    val allDefs = ctorDef :: memberDefs
 
     val classDef = irt.ClassDef(
       irt.Ident(className),
@@ -233,7 +242,7 @@ object Compiler {
 
   def compilePolyExpr(polyExpr: PolyExpr): irt.Tree = polyExpr match {
     case polyExpr: MethodInv =>
-      ???
+      compileMethodInv(polyExpr)
 
     case polyExpr: Conditional =>
       ???
@@ -253,6 +262,15 @@ object Compiler {
       ???
   }
 
+  def compileMethodInv(methodInv: MethodInv): irt.Tree = {
+
+    methodInv.args
+    methodInv.methodSel
+    val typeArgs = methodInv.typeArgs.map(compileType)
+
+    ???
+  }
+
   def compileTypeParam(tParam: TypeParam): irt.Tree = {
     ??? // TODO
   }
@@ -262,9 +280,9 @@ object Compiler {
     val name = irt.Ident(varDecl.name)
     val tpe = compileType(varDecl.varType)
     val init = varDecl.init.map(compileExpr)
-    // val modifiers = compileModifiers(varDecl.mods)
+    val modifiers = varDecl.mods
     val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
-      throw new Exception("[compileVarDecl] Variables must be initialized")) // TODO
+      irtpe.zeroOf(tpe))
 
     irt.VarDef(name, tpe, mutable = true, nameExpr)
   }
@@ -309,83 +327,84 @@ object Compiler {
     }
   }
 
-  def compileStatement(stmt: Statement): irt.Tree = stmt match {
-    case stmt: VarDecl =>
-      compileVarDecl(stmt)
+  def compileStatement(stmt: Statement): irt.Tree = {
+    implicit val pos = getPosition(stmt)
+    stmt match {
+      case stmt: VarDecl =>
+        compileVarDecl(stmt)
 
-    case stmt: ClassDecl =>
-      compileClassDecl(stmt)
+      case stmt: ClassDecl =>
+        compileClassDecl(stmt)
 
-    case stmt: Assert =>
-      ???
+      case stmt: Assert =>
+        ??? // TODO
 
-    case stmt: Throw =>
-      ???
+      case stmt: Throw =>
+        val expr = compileExpr(stmt.expr)
 
-    case stmt: Return =>
-      ???
+        irt.Throw(expr)
 
-    case stmt: Continue =>
-      ???
+      case stmt: Return =>
+        val expr = compileExpr(stmt.expr)
 
-    case stmt: Break =>
-      ???
+        irt.Return(expr)
 
-    case stmt: ExprStatement =>
-      ???
+      case stmt: Continue =>
+        val lab = stmt.label.map(name => irt.Ident(name))
 
-    case stmt: If =>
-      compileIf(stmt)
+        irt.Continue(lab)
 
-    case stmt: Block =>
-      compileBlock(stmt)
+      case stmt: Break =>
+        ??? // TODO
 
-    case stmt: TryStmt =>
-      ???
+      case stmt: ExprStatement =>
+        compileExpr(stmt.expr)
 
-    case stmt: Skip =>
-      ???
+      case stmt: If =>
+        compileIf(stmt)
 
-    case stmt: Case =>
-      ???
+      case stmt: Block =>
+        compileBlock(stmt)
 
-    case stmt: Switch =>
-      ???
+      case stmt: TryStmt =>
+        ??? // TODO
 
-    case stmt: Synchronized =>
-      ???
+      case stmt: Skip =>
+        irt.Skip()
 
-    case stmt: LabeledStmt =>
-      ???
+      case stmt: Case =>
+        ??? // TODO
 
-    case stmt: EnhancedForLoop =>
-      ???
+      case stmt: Switch =>
+        ???
 
-    case stmt: ForLoop =>
-      ???
+      case stmt: Synchronized =>
+        ???
 
-    case stmt: EnhancedForLoop =>
-      ???
+      case stmt: LabeledStmt =>
+        ???
 
-    case stmt: ForLoop =>
-      ???
+      case stmt: EnhancedForLoop =>
+        ???
 
-    case stmt: WhileLoop =>
-      ???
+      case stmt: ForLoop =>
+        ???
 
-    case stmt: DoWhileLoop =>
-      ???
+      case stmt: EnhancedForLoop =>
+        ???
+
+      case stmt: ForLoop =>
+        ???
+
+      case stmt: WhileLoop =>
+        ???
+
+      case stmt: DoWhileLoop =>
+        ???
+    }
   }
 
   def compileImport(imp: Import): irt.Tree = {
-    ??? // TODO
-  }
-
-  def compileCompilationUnit(compilationUnit: CompilationUnit): irt.Tree = {
-    implicit val pos = getPosition(compilationUnit)
-    val imports = compilationUnit.imports.map(compileImport)
-    val decls = compilationUnit.typeDecls.map(compileTree)
-
     ??? // TODO
   }
 
@@ -393,14 +412,8 @@ object Compiler {
   def compileTree(tree: Tree): irt.Tree = {
     implicit val pos = getPosition(tree)
     tree match {
-      case tree: CompilationUnit =>
-        ???
-
       case tree: Import =>
-        ???
-
-      case tree: Modifiers =>
-        ???
+        compileImport(tree)
 
       case tree: MethodDecl =>
         compileMethodDecl(tree)
@@ -417,9 +430,21 @@ object Compiler {
       case tree: Statement =>
         compileStatement(tree)
 
+      case tree: CompilationUnit =>
+        throw new Exception(
+          "Cannot have nested compilation units")
+
       case _ =>
         throw new Exception(
           s"Cannot yet compile a tree of class ${tree.getClass}")
     }
+  }
+
+  def compile(compilationUnit: CompilationUnit): List[irt.Tree] = {
+    implicit val pos = getPosition(compilationUnit)
+    val imports = compilationUnit.imports.map(compileImport)
+    val decls = compilationUnit.typeDecls.map(compileTree)
+
+    decls // TODO
   }
 }
