@@ -257,7 +257,6 @@ object TreeTraverse {
     MethodInv(methodSel, typeArgs, args, tp)
   }
 
-
   // Specific per-node-type traversals.
 
   private def traverseCompilationUnit(compUnit: JCTree.JCCompilationUnit)(
@@ -330,12 +329,13 @@ object TreeTraverse {
   private def traverseClassDecl(classDecl: JCTree.JCClassDecl)(
       implicit pos: Position): ClassDecl = {
     val name = Name.fromJName(classDecl.getSimpleName)
+    val symbol = classDecl.sym
     val typeParams = classDecl.getTypeParameters.map(traverseTypeParam).toList
     val extendsCl = Option(classDecl.getExtendsClause).map(traverseExpr)
     val implementsCl = classDecl.getImplementsClause.map(traverseExpr).toList
     val members = classDecl.getMembers.map(traverseTree).toList
 
-    ClassDecl(name, typeParams, extendsCl, implementsCl, members)
+    ClassDecl(name, symbol, typeParams, extendsCl, implementsCl, members)
   }
 
   private def traverseLetExpr(letExpr: JCTree.LetExpr)(

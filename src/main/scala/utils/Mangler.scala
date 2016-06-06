@@ -1,5 +1,7 @@
 package utils
 
+import scala.collection.mutable.{Set => MSet}
+
 import javax.lang.model.element.Modifier
 
 import com.sun.tools.javac.code.{TypeTag, Type => JType}
@@ -10,6 +12,8 @@ import trees._
  * Name mangling
  */
 object Mangler {
+
+  private val usedLocalNames: MSet[String] = MSet.empty[String]
 
   private def mangledTypeName(tp: Type): String = tp match {
     case StatementType =>
@@ -44,6 +48,9 @@ object Mangler {
     case t: TypedTree => mangledTypeName(t.tp)
     case _            => throw new Exception("Cannot mangle names without types")
   }
+
+  private def encodeMemberNameInternal(sym: Symbol): String =
+    sym.name.toString.replace("_", "$und")
 
   /*
    * TODO in the next three methods need to encode the names

@@ -1,9 +1,8 @@
 
 import com.sun.tools.javac.code.TypeTag
-import com.sun.tools.javac.code.{Type => JType}
 import org.scalajs.core.ir
-import ir.{Position, Trees => irt, Types => irtpe}
-import ir.Definitions._
+import org.scalajs.core.ir.Definitions._
+import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 import trees._
 import utils.Mangler
 
@@ -13,6 +12,9 @@ object Compiler {
   final val MainObjectFullName = "main.Main"
 
   private final val MainClassFullName = MainObjectFullName + "$"
+
+  private final def objectClassIdent(implicit pos: Position) =
+    irt.Ident(ObjectClass, Some("java.lang.Object"))
 
   def getPosition(tree: Tree): Position =  tree.pos match {
     case trees.Position(line) => Position(Position.SourceFile(Config.testFilePath), line, 1)
@@ -66,8 +68,8 @@ object Compiler {
   }
 
   def isConstructor(tree: Tree): Boolean = tree match {
-    case tree: MethodDecl
-      if tree.name.str.equals("<init>") => true
+    case tree: MethodDecl =>
+      tree.symbol.isConstructor
 
     case _ =>
       false
@@ -85,11 +87,11 @@ object Compiler {
     val classType = irtpe.ClassType(className)
 
     irt.MethodDef(static = false,
-      irt.Ident("init___", Some("<init>")), Nil, irtpe.NoType,
+      irt.Ident("init___", Some("<init>__")), Nil, irtpe.NoType,
       irt.Block(List(
         irt.ApplyStatically(irt.This()(classType),
           irtpe.ClassType(ObjectClass),
-          irt.Ident("init___", Some("<init>")),
+          irt.Ident("init___", Some("<init>__")),
           Nil)(
           irtpe.NoType))))(
       irt.OptimizerHints.empty, None)
@@ -144,6 +146,21 @@ object Compiler {
         irt.OptimizerHints.empty, None)
   }
 
+  def compileExtendsClause(extendsCl: Option[Expr])(implicit pos: Position): irt.Ident = extendsCl match {
+    case  Some(Ident(sym, _, _)) =>
+      val oldName = sym.toString
+      val newName = encodeClassName(oldName)
+
+      irt.Ident(newName, Some(oldName))
+
+    case Some(_) =>
+      throw new Exception(
+        "[compileExtendsClause] expected Ident as the extends clause.")
+
+    case None =>
+      objectClassIdent
+  }
+
   def compileClassDecl(classDecl: ClassDecl): irt.ClassDef = {
     implicit val pos = getPosition(classDecl)
 
@@ -154,14 +171,15 @@ object Compiler {
     val ctorDef = compileDefaultConstructor(classDecl)
     val memberDefs = classDecl.members
         .filter(!isConstructor(_)).map(compileTree)
+    val extendsCl = Option(compileExtendsClause(classDecl.extendsCl))
 
     val allDefs = ctorDef :: memberDefs
 
     val classDef = irt.ClassDef(
       irt.Ident(className),
       ir.ClassKind.Class,
-      Some(irt.Ident(ObjectClass)),  // TODO compile extends clause
-      Nil,                           // TODO compile interfaces
+      extendsCl,
+      Nil,                       // TODO compile interfaces
       None,
       allDefs)(
       irt.OptimizerHints.empty)

@@ -164,7 +164,7 @@ sealed trait Statement extends Tree with StatementTree
 case class VarDecl(mods: Modifiers, name: Name, nameExpr: Option[Expr],
     varType: Tree, init: Option[Expr])(implicit val pos: Position) extends Statement
 
-case class ClassDecl(name: Name, typeParams: List[TypeParam],
+case class ClassDecl(name: Name, symbol: Symbol, typeParams: List[TypeParam],
     extendsCl: Option[Expr], implementsCl: List[Expr], members: List[Tree])(
     implicit val pos: Position) extends Statement
 
