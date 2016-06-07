@@ -1,4 +1,6 @@
 import com.sun.source.tree.VariableTree;
+import com.sun.tools.javac.code.Symbol;
+import com.sun.tools.javac.code.SymbolMetadata;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.List;
 
@@ -48,13 +50,56 @@ public class JTreeVisitor extends JCTree.Visitor {
             printInd("TYPE: " + tree.type.toString());
     }
 
+    private void printSymbol(Symbol sym) {
+        if (sym == null || !verbose) return;
+
+        printInd("SYMBOL:");
+        printInd("Base symbol: " + ((sym.baseSymbol() == null) ? "null" : sym.baseSymbol().toString()));
+        printInd("Completer: " + sym.completer);
+        printInd("Owner: " + sym.owner);
+        printInd("Erasure field: " + sym.erasure_field);
+        printInd("Flat name: " + sym.flatName());
+        printInd("Is inner" + sym.isInner());
+
+        if (sym instanceof Symbol.ClassSymbol) {
+            Symbol.ClassSymbol csym = (Symbol.ClassSymbol) sym;
+            printInd("Full name: " + csym.fullname);
+            printInd("Qualified name: " + csym.getQualifiedName());
+        }
+
+        if (sym instanceof Symbol.MethodSymbol) {
+            Symbol.MethodSymbol msym = (Symbol.MethodSymbol) sym;
+            printInd("Type: " + msym.type);
+            printInd("Type params: ");
+            if (msym.type != null)
+                msym.type.allparams().forEach(p -> printInd(p.toString()));
+
+            printInd("Parameters: ");
+
+            indent();
+            for (Symbol.VarSymbol vsym : msym.getParameters()) {
+                printSymbol(vsym);
+            }
+            unindent();
+
+            printInd("Qualified name: " + msym.getQualifiedName());
+        }
+
+        if (sym instanceof Symbol.VarSymbol) {
+            Symbol.VarSymbol vsym = (Symbol.VarSymbol) sym;
+            printInd("Var type: " + vsym.type);
+            printInd("Is resource variable: " + vsym.isResourceVariable());
+        }
+    }
+
     private void acceptOpt(JCTree tree) {
         if (tree != null) {
             indent();
 
             printType(tree);
 
-            printInd("(pos: " + tree.getStartPosition() + ")");
+            if (verbose)
+                printInd("(pos: " + tree.getStartPosition() + ")");
 
             if (tree.getTag() != null && verbose)
                 printInd("(tag: " + tree.getTag().toString() + ")");
@@ -116,6 +161,8 @@ public class JTreeVisitor extends JCTree.Visitor {
 
         printInd("simple name: " + that.getSimpleName());
 
+        printSymbol(that.sym);
+
         printInd("type params:");
         acceptOpt(that.getTypeParameters());
 
@@ -141,6 +188,8 @@ public class JTreeVisitor extends JCTree.Visitor {
         printInd("Name: " + that.getName());
 
         indent();
+
+        printSymbol(that.sym);
 
         printInd("type params:");
         acceptOpt(that.getTypeParameters());
@@ -169,6 +218,8 @@ public class JTreeVisitor extends JCTree.Visitor {
         printInd("Name: " + that.getName());
 
         indent();
+
+        printSymbol(that.sym);
 
         printInd("modifiers:");
         acceptOpt(that.getModifiers());
