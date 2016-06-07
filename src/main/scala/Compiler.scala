@@ -2,6 +2,7 @@
 import com.sun.tools.javac.code.TypeTag
 import org.scalajs.core.ir
 import org.scalajs.core.ir.Definitions._
+import org.scalajs.core.ir.Types.ClassType
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 import trees._
 import utils.Mangler
@@ -67,35 +68,7 @@ object Compiler {
     ir.Hashers.hashClassDef(classDef)
   }
 
-  def isConstructor(tree: Tree): Boolean = tree match {
-    case tree: MethodDecl =>
-      tree.symbol.isConstructor
-
-    case _ =>
-      false
-  }
-
-  // TODO
-  def compileConstructors(classDecl: ClassDecl): List[irt.MethodDef] = ???
-
-  // for now we'll only handle default constructor
-  def compileDefaultConstructor(classDecl: ClassDecl): irt.MethodDef = {
-    implicit val pos = getPosition(classDecl)
-    val ident = irt.Ident("init__", Some("<init>__"))
-    val tp = irtpe.NoType
-    val className = encodeClassName(classDecl.name)
-    val classType = irtpe.ClassType(className)
-
-    irt.MethodDef(static = false,
-      irt.Ident("init___", Some("<init>__")), Nil, irtpe.NoType,
-      irt.Block(List(
-        irt.ApplyStatically(irt.This()(classType),
-          irtpe.ClassType(ObjectClass),
-          irt.Ident("init___", Some("<init>__")),
-          Nil)(
-          irtpe.NoType))))(
-      irt.OptimizerHints.empty, None)
-  }
+  // Compiling types (from AST nodes, not attributes)
 
   def compilePrimitiveType(tTag: TypeTag): irtpe.Type = tTag match {
     case TypeTag.BOOLEAN => irtpe.BooleanType
@@ -122,9 +95,76 @@ object Compiler {
       ???
   }
 
+  // Utilty methods
+
+  def isConstructor(tree: Tree): Boolean = tree match {
+    case tree: MethodDecl => tree.symbol.isConstructor
+    case _                => false
+  }
+
+  def isSuperCall(stmt: Statement): Boolean = stmt match {
+    case ExprStatement(MethodInv(Ident(_, name, _), _, _, _)) =>
+      name.str == "super"
+
+    case _ =>
+      false
+  }
+
+  // Compiling constructors
+
+  /** Compiles statement of a constructor body
+    *
+    * The reason we need this is because Scala(.js) has
+    * no explicit `super(...)` call mechanism so we have to
+    * compile them separately.
+    */
+  def compileConstructorStmt(className: irt.Ident, classType: irtpe.ClassType,
+      constrName: irt.Ident, constrArgs: List[irt.Tree],
+      stmt: Statement): irt.Tree = {
+    implicit val pos = getPosition(stmt)
+
+    if (isSuperCall(stmt)) {
+      irt.ApplyStatically(irt.This()(classType), classType, constrName,
+        constrArgs)(irtpe.NoType)
+    } else {
+      compileStatement(stmt)
+    }
+  }
+
+  /** Compiles a class constructor.
+    *
+    * We need a separate method because of the special handling of java's
+    * `super` calls (see `compileConstructorStmt`).
+    * */
+  def compileConstructor(className: irt.Ident, classType: irtpe.ClassType,
+      methodDecl: MethodDecl): irt.MethodDef = {
+    implicit val pos = getPosition(methodDecl)
+
+    val constrName = Mangler.encodeMethodSym(methodDecl.symbol)
+    val constrArgs = methodDecl.params.map(compileParam)
+    val tp = irtpe.NoType
+    // helper func to capture the names:
+    val compConsStmt = (stmt: Statement) =>
+      compileConstructorStmt(className, classType, constrName, constrArgs, stmt)
+    val body = irt.Block(methodDecl.body.statements.map(compConsStmt))
+
+    val retType = methodDecl.retType.map(compileType).getOrElse(irtpe.NoType)
+    val params = methodDecl.params.map(compileParam)
+    val defVal = methodDecl.defVal.map(compileExpr)
+    val thrown = methodDecl.thrown.map(compileExpr)
+    val recvParam = methodDecl.recvParam.map(compileVarDecl)
+    val typeParams = methodDecl.typeParams.map(compileTypeParam)
+
+    irt.MethodDef(static = false, constrName, params, retType, body)(
+      irt.OptimizerHints.empty, None)
+
+  }
+
+  // Compiling methods
+
   def compileParam(param: VarDecl): irt.ParamDef = {
     implicit val pos = getPosition(param)
-    val name = irt.Ident(param.name) // TODO mangle
+    val name = Mangler.encodeLocalSym(param.symbol) // irt.Ident(param.name)
     val ptpe = compileType(param.varType)
 
     irt.ParamDef(name, ptpe, mutable = true, rest = false)
@@ -132,7 +172,7 @@ object Compiler {
 
   def compileMethodDecl(methodDecl: MethodDecl): irt.MethodDef = {
     implicit val pos = getPosition(methodDecl)
-    val name = irt.Ident(Mangler.mangleMethodName(methodDecl))
+    val name = Mangler.encodeMethodSym(methodDecl.symbol) // irt.Ident(Mangler.mangleMethodName(methodDecl))
     val retType = methodDecl.retType.map(compileType).getOrElse(irtpe.NoType)
     val params = methodDecl.params.map(compileParam)
     val body = compileTree(methodDecl.body)
@@ -144,6 +184,22 @@ object Compiler {
 
     irt.MethodDef(static = false, name, params, retType, body)(
         irt.OptimizerHints.empty, None)
+  }
+
+  // Compiling classes
+
+  def compileFieldDef(varDecl: VarDecl): irt.FieldDef = {
+    implicit val pos = getPosition(varDecl)
+    val name = Mangler.encodeFieldSym(varDecl.symbol)
+    val tpe = compileType(varDecl.varType)
+    val init = varDecl.init.map(compileExpr)
+    val modifiers = varDecl.mods
+    val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
+      irtpe.zeroOf(tpe))
+
+    // TODO what happens with the initializer?
+
+    irt.FieldDef(name, tpe, mutable = true)
   }
 
   def compileExtendsClause(extendsCl: Option[Expr])(implicit pos: Position): irt.Ident = extendsCl match {
@@ -161,31 +217,70 @@ object Compiler {
       objectClassIdent
   }
 
+  def compileMember(className: irt.Ident, classType: irtpe.ClassType,
+      member: Tree): irt.Tree = member match {
+    case member: MethodDecl if isConstructor(member) =>
+      compileConstructor(className, classType, member)
+
+    case member =>
+      compileTree(member)
+  }
+
   def compileClassDecl(classDecl: ClassDecl): irt.ClassDef = {
     implicit val pos = getPosition(classDecl)
 
-    val className = encodeClassName(classDecl.name)
-    val classType = irtpe.ClassType(className)
+    val className = Mangler.encodeClassFullNameIdent(classDecl.symbol)
+    val classType = Mangler.encodeClassType(classDecl.symbol)
+        .asInstanceOf[ClassType]
 
-    // TODO only default constructor is compiled right now
-    val ctorDef = compileDefaultConstructor(classDecl)
-    val memberDefs = classDecl.members
-        .filter(!isConstructor(_)).map(compileTree)
+    val memberDefs = classDecl.members.map(compileMember(className, classType, _))
     val extendsCl = Option(compileExtendsClause(classDecl.extendsCl))
 
-    val allDefs = ctorDef :: memberDefs
-
     val classDef = irt.ClassDef(
-      irt.Ident(className),
+      className,
       ir.ClassKind.Class,
       extendsCl,
       Nil,                       // TODO compile interfaces
       None,
-      allDefs)(
+      memberDefs)(
       irt.OptimizerHints.empty)
 
     ir.Hashers.hashClassDef(classDef)
   }
+
+  // Compile low-level nodes
+
+  def compileLocalVar(varDecl: VarDecl): irt.VarDef = {
+    implicit val pos = getPosition(varDecl)
+    val name = Mangler.encodeLocalSym(varDecl.symbol)
+
+    val tpe = compileType(varDecl.varType)
+    val init = varDecl.init.map(compileExpr)
+    val modifiers = varDecl.mods
+    val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
+      irtpe.zeroOf(tpe))
+
+    irt.VarDef(name, tpe, mutable = true, nameExpr)
+  }
+
+  def compileBlock(block: Block): irt.Tree = {
+    implicit val pos = getPosition(block)
+    val statements = block.statements.map(compileStatement)
+
+    irt.Block(statements)
+  }
+
+  def compileIf(ifStmt: If): irt.If = {
+    implicit val pos = getPosition(ifStmt)
+    val cond = compileExpr(ifStmt.cond)
+    val thenp = compileStatement(ifStmt.thenStmt)
+    val elsep = ifStmt.elseStmt.map(compileStatement).getOrElse(irt.EmptyTree)
+    val tpe = irtpe.NoType  // in Java if won't ever be in expression position
+
+    irt.If(cond, thenp, elsep)(tpe)
+  }
+
+  // Compiling higher-level nodes
 
   def compileExpr(expr: Expr): irt.Tree = expr match {
     case expr: LetExpr =>
@@ -281,7 +376,7 @@ object Compiler {
   }
 
   def compileMethodInv(methodInv: MethodInv): irt.Tree = {
-
+    // we need to translate a super(...) call explicitly
     methodInv.args
     methodInv.methodSel
     val typeArgs = methodInv.typeArgs.map(compileType)
@@ -293,33 +388,15 @@ object Compiler {
     ??? // TODO
   }
 
-  def compileVarDecl(varDecl: VarDecl): irt.VarDef = {
-    implicit val pos = getPosition(varDecl)
-    val name = irt.Ident(varDecl.name)
-    val tpe = compileType(varDecl.varType)
-    val init = varDecl.init.map(compileExpr)
-    val modifiers = varDecl.mods
-    val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
-      irtpe.zeroOf(tpe))
+  def compileVarDecl(varDecl: VarDecl): irt.Tree = varDecl.kind match {
+    case ClassMember =>
+      compileFieldDef(varDecl)
 
-    irt.VarDef(name, tpe, mutable = true, nameExpr)
-  }
+    case Param =>
+      compileParam(varDecl)
 
-  def compileBlock(block: Block): irt.Tree = {
-    implicit val pos = getPosition(block)
-    val statements = block.statements.map(compileStatement)
-
-    irt.Block(statements)
-  }
-
-  def compileIf(ifStmt: If): irt.If = {
-    implicit val pos = getPosition(ifStmt)
-    val cond = compileExpr(ifStmt.cond)
-    val thenp = compileStatement(ifStmt.thenStmt)
-    val elsep = ifStmt.elseStmt.map(compileStatement).getOrElse(irt.EmptyTree)
-    val tpe = irtpe.NoType  // in Java if won't ever be in expression position
-
-    irt.If(cond, thenp, elsep)(tpe)
+    case LocalVar =>
+      compileLocalVar(varDecl)
   }
 
   def compileLiteral(lit: Literal): irt.Literal = {
@@ -342,6 +419,9 @@ object Compiler {
 
       case DoubleLiteral(value, _) =>
         irt.DoubleLiteral(value)
+
+      case ClassLiteral(value, _) =>
+        ???
     }
   }
 

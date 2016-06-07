@@ -273,8 +273,9 @@ object TreeTraverse {
     val symbol = methodDecl.sym
     val modifiers = traverseModifiers(methodDecl.getModifiers)
     val typeParams = methodDecl.getTypeParameters.map(traverseTypeParam).toList
-    val recvParam = Option(methodDecl.getReceiverParameter).map(traverseVarDecl)
-    val params = methodDecl.getParameters.map(traverseVarDecl).toList
+    val recvParam = Option(methodDecl.getReceiverParameter)
+        .map(traverseVarDecl(_, Param))
+    val params = methodDecl.getParameters.map(traverseVarDecl(_, Param)).toList
     val thrown = methodDecl.getThrows.map(traverseExpr).toList
     val retType = Option(methodDecl.getReturnType).map(traverseTree)
     val body = traverseBlock(methodDecl.getBody)
@@ -315,15 +316,16 @@ object TreeTraverse {
     Modifiers(flags, annotations)
   }
 
-  private def traverseVarDecl(varDecl: JCTree.JCVariableDecl)(
-      implicit pos: Position): VarDecl = {
+  private def traverseVarDecl(varDecl: JCTree.JCVariableDecl,
+      kind: VarDeclKind = ClassMember)(implicit pos: Position): VarDecl = {
     val initializer = Option(varDecl.getInitializer).map(traverseExpr)
     val modifiers = traverseModifiers(varDecl.getModifiers)
+    val symbol = varDecl.sym
     val name = Name.fromJName(varDecl.getName)
     val nameExpr = Option(varDecl.getNameExpression).map(traverseExpr)
     val tpe = traverseTree(varDecl.getType)
 
-    VarDecl(modifiers, name, nameExpr, tpe, initializer)
+    VarDecl(modifiers, name, nameExpr, symbol, tpe, initializer, kind)
   }
 
   private def traverseClassDecl(classDecl: JCTree.JCClassDecl)(
@@ -340,7 +342,8 @@ object TreeTraverse {
 
   private def traverseLetExpr(letExpr: JCTree.LetExpr)(
       implicit pos: Position): LetExpr = {
-    val defs = letExpr.defs.map(traverseVarDecl).toList
+    // TODO maybe another VarDeclKind is in order?
+    val defs = letExpr.defs.map(traverseVarDecl(_, LocalVar)).toList
     val expr = traverseTree(letExpr.expr)
     val tp = JExprType(letExpr.`type`)
 
@@ -614,7 +617,7 @@ object TreeTraverse {
 
   private def traverseCatch(catchStmt: JCTree.JCCatch)(
       implicit pos: Position): CatchTree = {
-    val param = traverseVarDecl(catchStmt.getParameter)
+    val param = traverseVarDecl(catchStmt.getParameter, Param)
     val body = traverseBlock(catchStmt.getBlock)
 
     CatchTree(param, body)
@@ -664,7 +667,7 @@ object TreeTraverse {
 
   private def traverseEnhancedForLoop(enhForLoop: JCTree.JCEnhancedForLoop)(
       implicit pos: Position): EnhancedForLoop = {
-    val variable = traverseVarDecl(enhForLoop.getVariable)
+    val variable = traverseVarDecl(enhForLoop.getVariable, LocalVar)
     val expr = traverseExpr(enhForLoop.getExpression)
     val body = traverseStmt(enhForLoop.getStatement)
 
@@ -713,7 +716,7 @@ object TreeTraverse {
       implicit pos: Position): Lambda = {
     val body = traverseTree(lambda.getBody)
     val bodyKind = if (lambda.getBodyKind == BodyKind.EXPRESSION) ExpressionKind else StatementKind
-    val params = lambda.params.map(traverseVarDecl).toList
+    val params = lambda.params.map(traverseVarDecl(_, Param)).toList
     val tp = JExprType(lambda.`type`)
 
     Lambda(params, body, bodyKind, tp)

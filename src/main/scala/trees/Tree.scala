@@ -1,11 +1,11 @@
 package trees
 
-import com.sun.tools.javac.code.{Symbol, TypeTag, Type=>JType}
+import com.sun.tools.javac.code.{Symbol, TypeTag, Type => JType}
 import com.sun.tools.javac.util.{Name => JName}
 import javax.lang.model.element.Modifier
 import javax.lang.model.`type`.TypeKind
 
-import com.sun.tools.javac.code.Symbol.MethodSymbol
+import com.sun.tools.javac.code.Symbol.{ClassSymbol, MethodSymbol, VarSymbol}
 
 
 // Tree
@@ -162,9 +162,10 @@ sealed trait Statement extends Tree with StatementTree
 
 // TODO sym: Symbol.VarSymbol
 case class VarDecl(mods: Modifiers, name: Name, nameExpr: Option[Expr],
-    varType: Tree, init: Option[Expr])(implicit val pos: Position) extends Statement
+    symbol: VarSymbol, varType: Tree, init: Option[Expr], kind: VarDeclKind)(
+    implicit val pos: Position) extends Statement
 
-case class ClassDecl(name: Name, symbol: Symbol, typeParams: List[TypeParam],
+case class ClassDecl(name: Name, symbol: ClassSymbol, typeParams: List[TypeParam],
     extendsCl: Option[Expr], implementsCl: List[Expr], members: List[Tree])(
     implicit val pos: Position) extends Statement
 
@@ -248,3 +249,8 @@ case object New extends ReferenceMode
 sealed trait BodyKind
 case object StatementKind extends BodyKind
 case object ExpressionKind extends BodyKind
+
+sealed trait VarDeclKind
+case object ClassMember extends VarDeclKind
+case object Param extends VarDeclKind
+case object LocalVar extends VarDeclKind
