@@ -1,5 +1,6 @@
 
-import com.sun.tools.javac.code.TypeTag
+import com.sun.tools.javac.code.Symbol.VarSymbol
+import com.sun.tools.javac.code.{TypeTag, Type => JType}
 import org.scalajs.core.ir
 import org.scalajs.core.ir.Definitions._
 import org.scalajs.core.ir.Types.ClassType
@@ -68,7 +69,7 @@ object Compiler {
     ir.Hashers.hashClassDef(classDef)
   }
 
-  // Compiling types (from AST nodes, not attributes)
+  // Compiling types
 
   def compilePrimitiveType(tTag: TypeTag): irtpe.Type = tTag match {
     case TypeTag.BOOLEAN => irtpe.BooleanType
@@ -84,6 +85,20 @@ object Compiler {
       "[compilePrimitiveType] Not a primitive type")
   }
 
+  def compileObjectType(tpe: JType): irtpe.Type = ???  // TODO
+
+  def compileJavaType(tpe: JExprType): irtpe.Type = {
+    if (tpe.jtype.isPrimitive) compilePrimitiveType(tpe.jtype.getTag)
+    else compileObjectType(tpe.jtype)
+  }
+
+  /** Compile a type encoded as an AST attribute */
+  def compileType(tpe: Type): irtpe.Type = tpe match {
+    case tp: JExprType => compileJavaType(tp)
+    case StatementType => irtpe.NoType
+  }
+
+  /** Compile a type encoded as an AST node */
   def compileType(tpe: Tree): irtpe.Type = tpe match {
     case PrimitiveTypeTree(_, tTag, _) =>
       compilePrimitiveType(tTag)
@@ -108,6 +123,11 @@ object Compiler {
 
     case _ =>
       false
+  }
+
+  def isThisSelect(fieldAcc: FieldAccess): Boolean = fieldAcc.selected match {
+    case Ident(_, name, tp) => name.str == "this"
+    case _                  => false
   }
 
   // Compiling constructors
@@ -245,6 +265,8 @@ object Compiler {
       memberDefs)(
       irt.OptimizerHints.empty)
 
+    print(classDef)
+
     ir.Hashers.hashClassDef(classDef)
   }
 
@@ -278,6 +300,50 @@ object Compiler {
     val tpe = irtpe.NoType  // in Java if won't ever be in expression position
 
     irt.If(cond, thenp, elsep)(tpe)
+  }
+
+  def compileSelectIdent(expr: Expr): irt.Ident = expr match {
+    case Ident(sym, _, _) =>
+      implicit val pos = getPosition(expr)
+      if (sym.isLocal) Mangler.encodeLocalSym(sym)
+      else Mangler.encodeFieldSym(sym.asInstanceOf[VarSymbol]) // TODO
+
+    case _ =>
+      throw new Exception(
+        "[compileSelectIdent] Expression has to be an ident.")
+  }
+
+  def compileFieldAccess(fieldAcc: FieldAccess): irt.Select = {
+    implicit val pos = getPosition(fieldAcc)
+    val item = compileSelectIdent(fieldAcc.selected)
+    val tpe = compileType(fieldAcc.tp)
+    val qualifier =
+    if (isThisSelect(fieldAcc)) {
+        irt.This()(irtpe.NoType)
+      } else {
+        val name = Mangler.encodeFieldSym(fieldAcc.symbol.asInstanceOf[VarSymbol])
+        irt.VarRef(name)(tpe)
+      }
+
+    irt.Select(qualifier, item)(tpe)
+  }
+
+  def compileAssign(assign: Assign): irt.Assign = {
+    implicit val pos = getPosition(assign)
+    val lhs = compileExpr(assign.variable)
+    val rhs = compileExpr(assign.expr)
+    irt.Assign(lhs, rhs)
+  }
+
+  def compileIdent(ident: Ident): irt.VarRef = {
+    implicit val pos = getPosition(ident)
+    val sym = ident.symbol
+    val tpe = compileType(ident.tp)
+    val name =
+      if (sym.isLocal) Mangler.encodeLocalSym(sym)
+      else Mangler.encodeFieldSym(sym.asInstanceOf[VarSymbol])
+
+    irt.VarRef(name)(tpe)
   }
 
   // Compiling higher-level nodes
@@ -317,10 +383,10 @@ object Compiler {
       compileLiteral(expr)
 
     case expr: Ident =>
-      ???
+      compileIdent(expr)
 
     case expr: FieldAccess =>
-      ???
+      compileFieldAccess(expr)
 
     case expr: ArrayAccess =>
       ???
@@ -341,7 +407,7 @@ object Compiler {
       ???
 
     case expr: Assign =>
-      ???
+      compileAssign(expr)
 
     case expr: Parens =>
       ???

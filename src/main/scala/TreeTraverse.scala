@@ -324,8 +324,9 @@ object TreeTraverse {
     val name = Name.fromJName(varDecl.getName)
     val nameExpr = Option(varDecl.getNameExpression).map(traverseExpr)
     val tpe = traverseTree(varDecl.getType)
+    val newKind = if (symbol.isLocal) LocalVar else kind
 
-    VarDecl(modifiers, name, nameExpr, symbol, tpe, initializer, kind)
+    VarDecl(modifiers, name, nameExpr, symbol, tpe, initializer, newKind)
   }
 
   private def traverseClassDecl(classDecl: JCTree.JCClassDecl)(

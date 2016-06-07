@@ -59,7 +59,8 @@ public class JTreeVisitor extends JCTree.Visitor {
         printInd("Owner: " + sym.owner);
         printInd("Erasure field: " + sym.erasure_field);
         printInd("Flat name: " + sym.flatName());
-        printInd("Is inner" + sym.isInner());
+        printInd("Is inner: " + sym.isInner());
+        printInd("Is local: " + sym.isLocal());
 
         if (sym instanceof Symbol.ClassSymbol) {
             Symbol.ClassSymbol csym = (Symbol.ClassSymbol) sym;
@@ -770,9 +771,10 @@ public class JTreeVisitor extends JCTree.Visitor {
 
         printInd("name: " + that.getName().toString());
 
+        printSymbol(that.sym);
+
         if (that.sym != null)
             printInd("symbol: " + that.sym.toString());
-
         unindent();
     }
 
