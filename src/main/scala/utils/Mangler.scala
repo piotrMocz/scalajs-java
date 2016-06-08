@@ -11,15 +11,17 @@ package utils
  * @author  Sébastien Doeraene
  */
 
+import javax.lang.model
+
 import scala.collection.mutable.{Map => MMap, Set => MSet}
 import scala.collection.JavaConversions._
 import javax.lang.model.element.Modifier
 
+import com.sun.tools.classfile.Instruction.TypeKind
 import com.sun.tools.javac.code.Symbol.{MethodSymbol, TypeSymbol, VarSymbol}
 import com.sun.tools.javac.code.{Symbol, TypeTag, Type => JType}
 import org.scalajs.core.ir.Definitions
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
-
 import trees._
 
 /*
@@ -76,7 +78,7 @@ object Mangler {
   // TODO
   private lazy val allRefClasses: Set[Symbol] = Set.empty[Symbol]
 
-  def encodeFieldSym(sym: VarSymbol)(implicit pos: Position): irt.Ident = {
+  def encodeFieldSym(sym: Symbol)(implicit pos: Position): irt.Ident = {
     val name0 = encodeMemberNameInternal(sym)
     val name =
       if (name0.charAt(name0.length()-1) != ' ') name0
@@ -98,21 +100,23 @@ object Mangler {
     irt.Ident(mangleJSName(encodedName), Some(sym.flatName().toString))
   }
 
-  def encodeMethodSym(sym: MethodSymbol, reflProxy: Boolean = false)
+  def encodeMethod(mDecl: MethodDecl, reflProxy: Boolean = false)
       (implicit pos: Position): irt.Ident = {
-    val (encodedName, paramsString) = encodeMethodNameInternal(sym, reflProxy)
+    val (encodedName, paramsString) = encodeMethodNameInternal(mDecl, reflProxy)
     irt.Ident(encodedName + paramsString,
-      Some(sym.flatName().toString + paramsString))
+      Some(mDecl.symbol.flatName().toString + paramsString))
   }
 
-  def encodeMethodName(sym: MethodSymbol, reflProxy: Boolean = false): String = {
-    val (encodedName, paramsString) = encodeMethodNameInternal(sym, reflProxy)
+  def encodeMethodName(mDecl: MethodDecl, reflProxy: Boolean = false): String = {
+    val (encodedName, paramsString) = encodeMethodNameInternal(mDecl, reflProxy)
     encodedName + paramsString
   }
 
-  private def encodeMethodNameInternal(sym: MethodSymbol,
+  private def encodeMethodNameInternal(mDecl: MethodDecl,
       reflProxy: Boolean = false,
       inRTClass: Boolean = false): (String, String) = {
+
+    val sym = mDecl.symbol
 
     def name = encodeMemberNameInternal(sym)
 
@@ -129,7 +133,7 @@ object Mangler {
         mangleJSName(name)
     }
 
-    val paramsString = makeParamsString(sym, reflProxy, inRTClass)
+    val paramsString = makeParamsString(mDecl, reflProxy, inRTClass)
 
     (encodedName, paramsString)
   }
@@ -152,7 +156,7 @@ object Mangler {
 //  def foreignIsImplClass(sym: Symbol): Boolean =
 //    sym.isModuleClass && nme.isImplClassName(sym.name)
 
-  def encodeClassType(sym: Symbol): irtpe.Type =
+  def encodeClassType(sym: Symbol): irtpe.ClassType =
     irtpe.ClassType(encodeClassFullName(sym))
 
   def encodeClassFullNameIdent(sym: Symbol)(implicit pos: Position): irt.Ident = {
@@ -171,9 +175,9 @@ object Mangler {
     sym.name.toString.replace("_", "$und")
 
 
-  private def makeParamsString(sym: MethodSymbol, reflProxy: Boolean,
+  private def makeParamsString(mDecl: MethodDecl, reflProxy: Boolean,
       inRTClass: Boolean): String =  {
-    val paramTypeNames0 = sym.getParameters.map(p => internalName(p.`type`)).toList
+    val paramTypeNames0 = mDecl.params.map(p => internalName(p.varType))
 
     val hasExplicitThisParameter = inRTClass
     val paramTypeNames = paramTypeNames0 // TODO
@@ -181,12 +185,12 @@ object Mangler {
       // else internalName(sym.owner.toTypeConstructor) :: paramTypeNames0
 
     val paramAndResultTypeNames = {
-      if (sym.isConstructor)
+      if (mDecl.symbol.isConstructor)
         paramTypeNames
       else if (reflProxy)
         paramTypeNames :+ ""
       else
-        paramTypeNames :+ internalName(sym.getReturnType)
+        paramTypeNames :+ mDecl.retType.map(internalName).getOrElse("V")
     }
     makeParamsString(paramAndResultTypeNames)
   }
@@ -195,6 +199,8 @@ object Mangler {
     paramAndResultTypeNames.mkString(OuterSep, OuterSep, "")
 
   /** Computes the internal name for a type. */
+  private def internalName(tpe: Tree): String = mangleType(tpe)
+
   private def internalName(tpe: Type): String = mangledTypeName(tpe)
 
   private def internalName(jtpe: JType): String = mangleJType(jtpe)
@@ -217,10 +223,10 @@ object Mangler {
   }
 
   private def mangleJType(jtype: JType): String =
-    if (jtype.isPrimitive) manglePrimitiveType(jtype)
+    if (jtype.isPrimitive) manglePrimitiveType(jtype.getTag)
     else mangleObjectType(jtype)
 
-  private def manglePrimitiveType(jtype: JType): String = jtype.getTag match {
+  private def manglePrimitiveType(ttag: TypeTag): String = ttag match {
     case TypeTag.BOOLEAN => "Z"
     case TypeTag.BYTE    => "B"
     case TypeTag.CHAR    => "C"
@@ -231,16 +237,24 @@ object Mangler {
     case TypeTag.SHORT   => "S"
     case TypeTag.VOID    => "V"
     case _               => throw new Exception(
-      s"[manglePrimitiveType] type ${jtype.tsym} is not primitive")
+      s"[manglePrimitiveType] type is not primitive")
   }
 
   // TODO
-  private def mangleObjectType(jtype: JType): String = ???
+  private def mangleObjectType(jtype: JType): String = {
+    val tname = jtype.tsym.toString
+    if (jtype.getTag == TypeTag.ARRAY) "A" + mangleJType(jtype.allparams().head)
+    else if (tname == "java.lang.String")  "T"
+    else throw new Exception(
+      s"[mangleObjectType] Cannot yet handle type: ${jtype.tsym.toString}")
+  }
 
   // TODO this TypedTree class hierarchy is not very good, rethink
-  private def mangleType(tree: Tree): String = tree match {
-    case t: TypedTree => mangledTypeName(t.tp)
-    case _            => throw new Exception("Cannot mangle names without types")
+  def mangleType(tree: Tree): String = tree match {
+    case t: PrimitiveTypeTree => manglePrimitiveType(t.typeTag)
+    case t: ArrayTypeTree     => "A" + mangleType(t.elemType)
+    case t: TypedTree         => mangledTypeName(t.tp)
+    case _                    => throw new Exception("Cannot mangle names without types")
   }
 
 }

@@ -1,5 +1,7 @@
 package trees
 
+import scala.language.implicitConversions
+
 import com.sun.tools.javac.code.{Symbol, TypeTag, Type => JType}
 import com.sun.tools.javac.util.{Name => JName}
 import javax.lang.model.element.Modifier
@@ -174,7 +176,7 @@ case class Assert(cond: Expr, detail: Expr)(
 
 case class Throw(expr: Expr)(implicit val pos: Position) extends Statement
 
-case class Return(expr: Expr)(implicit val pos: Position) extends Statement
+case class Return(expr: Option[Expr])(implicit val pos: Position) extends Statement
 
 case class Continue(label: Option[Name])(
     implicit val pos: Position) extends Statement

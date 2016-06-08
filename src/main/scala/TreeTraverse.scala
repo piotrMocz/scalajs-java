@@ -324,7 +324,7 @@ object TreeTraverse {
     val name = Name.fromJName(varDecl.getName)
     val nameExpr = Option(varDecl.getNameExpression).map(traverseExpr)
     val tpe = traverseTree(varDecl.getType)
-    val newKind = if (symbol.isLocal) LocalVar else kind
+    val newKind = if (symbol.isLocal && kind == ClassMember) LocalVar else kind
 
     VarDecl(modifiers, name, nameExpr, symbol, tpe, initializer, newKind)
   }
@@ -547,11 +547,11 @@ object TreeTraverse {
     val annotations = newArray.getAnnotations.map(traverseAnnotation).toList
     val dimAnnotations = newArray.getDimAnnotations.map(_.map(traverseAnnotation).toList).toList
     val dimensions = newArray.getDimensions.map(traverseExpr).toList
-    // TODO val initializers = newArray.getInitializers.map(traverseExpr).toList
+    val initializers = newArray.getInitializers.map(traverseExpr).toList
     val elType = Option(newArray.getType).map(traverseExpr)
     val tp = JExprType(newArray.`type`)
 
-    NewArray(annotations, dimAnnotations, dimensions, null, elType, tp)
+    NewArray(annotations, dimAnnotations, dimensions, initializers, elType, tp)
   }
 
   private def traverseAssert(assert: JCTree.JCAssert)(
@@ -571,7 +571,7 @@ object TreeTraverse {
 
   private def traverseReturn(retStmt: JCTree.JCReturn)(
       implicit pos: Position): Return = {
-    val expr = traverseExpr(retStmt.getExpression)
+    val expr = Option(retStmt.getExpression).map(traverseExpr)
 
     Return(expr)
   }

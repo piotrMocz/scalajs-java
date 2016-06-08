@@ -1,12 +1,11 @@
 import org.scalajs.core.ir
-
+import org.scalajs.core.ir.Trees.ClassDef
 import ir.Printers._
 import org.scalajs.core.tools.logging._
 import org.scalajs.core.tools.io._
 import org.scalajs.core.tools.jsdep.ResolvedJSDependency
 import org.scalajs.jsenv._
-
-import trees.Tree
+import trees.{CompilationUnit, Tree}
 
 
 object Main {
@@ -25,7 +24,7 @@ object Main {
     println("\n\n")
 
     println("---------------------------- AST -------------------------")
-    val treeVisitor = new JTreeVisitor(false)
+    val treeVisitor = new JTreeVisitor(true)
     compiler.compilationUnit.getTree.accept(treeVisitor)
     println("\n\n")
 
@@ -36,19 +35,28 @@ object Main {
     println("---------------------------- IR  -------------------------")
     val ir = Compiler.compile(tree)
     println(ir.toString)
+
+    println()
+    println("------------------------ Running -------------------------")
+    compileAndRun(tree)
+
   }
 
-  private def compileAndRun(tree: Tree): Unit = {
-    val classDef = Compiler.compileMainClass(tree)
+  private def compileAndRun(compilationUnit: CompilationUnit): Unit = {
+    val defs = Compiler.compile(compilationUnit)
 
     val writer = new java.io.PrintWriter(System.out)
     try {
       val printer = new IRTreePrinter(writer)
-      printer.printTopLevelTree(classDef)
+      defs foreach { d =>
+        printer.printTopLevelTree(d)
+      }
     } finally {
       writer.flush()
     }
 
+    // TODO compile more classes in one file
+    val classDef = defs.head.asInstanceOf[ClassDef]
     val linked = Linker.link(classDef, new ScalaConsoleLogger)
 
     // Clearly separate the output of the program from the compiling logs
