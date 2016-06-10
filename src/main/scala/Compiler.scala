@@ -1,8 +1,11 @@
 
+import javax.lang.model.element.Modifier
+
 import com.sun.tools.javac.code.Symbol.VarSymbol
 import com.sun.tools.javac.code.{TypeTag, Type => JType}
 import org.scalajs.core.ir
 import org.scalajs.core.ir.Definitions._
+import org.scalajs.core.ir.Trees.OptimizerHints
 import org.scalajs.core.ir.Types.ClassType
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 import trees._
@@ -20,85 +23,29 @@ object Compiler {
 
   private final val objectClassType = irtpe.ClassType("O")
 
+  var companionObjects: List[irt.ClassDef] = Nil
+
   def getPosition(tree: Tree): Position =  tree.pos match {
     case trees.Position(line) => Position(Position.SourceFile(Config.testFilePath), line, 1)
   }
 
-  def enhanceMainClassConstr(classType: irtpe.ClassType,
-      member: irt.Tree): irt.Tree = {
-    implicit val pos = member.pos
-    member match {
-      case m: irt.MethodDef if m.name.name.startsWith("init___") =>
-        val storeModule = irt.StoreModule(classType, irt.This()(classType))
-        val newBody: irt.Tree = irt.Block(m.body, storeModule)
-        m.copy(body = newBody)(m.optimizerHints, m.hash)
+  /** This is the default (no-arg) constructor for a companion object
+    * that we have to include. */
+  def defaultConstructor(classIdent: irt.Ident, classType: irtpe.ClassType)(
+      implicit pos: Position): irt.MethodDef = {
 
-      case m =>
-        m
-    }
+    val constrIdent = irt.Ident("init___", Some("<init>__"))
 
+    val superCall = irt.ApplyStatically(
+      irt.This()(classType), objectClassType,
+      constrIdent, Nil)(irtpe.NoType)
 
-  }
+    val storeModule = irt.StoreModule(classType, irt.This()(classType))
 
-  /**
-    * Compile an expression tree into a full `ClassDef`.
-    */
-  def compileMainClass(classDecl: ClassDecl): irt.ClassDef = {
-    implicit val pos = getPosition(classDecl)
-
-    val mainObjectFullName = classDecl.name.str
-    val mainClassFullName = mainObjectFullName + "$"
-
-    val mainClassName = encodeClassName(mainClassFullName)
-    val mainClassType = irtpe.ClassType(mainClassName)
-    val mainClassIdent = irt.Ident(mainClassName)
-
-    val superClassType = objectClassType
-
-    val ctorDef = irt.MethodDef(static = false,
-      irt.Ident("init___", Some("<init>")), Nil, irtpe.NoType,
-      irt.Block(List(
-        irt.ApplyStatically(irt.This()(mainClassType),
-          irtpe.ClassType(ObjectClass),
-          irt.Ident("init___", Some("<init>")),
-          Nil)(
-          irtpe.NoType),
-        irt.StoreModule(mainClassType, irt.This()(mainClassType)))))(
-      irt.OptimizerHints.empty, None)
-
-//    val body = compileTree(classDecl)
-//    val methodDef = irt.MethodDef(static = false,
-//      irt.Ident("main__D", Some("main")), Nil, irtpe.DoubleType, body)(
-//      irt.OptimizerHints.empty, None)
-    val memberDefs = classDecl.members.map { m =>
-      compileMember(mainClassIdent, mainClassType, superClassType, m)
-    }
-
-    val mainMemberDefs = memberDefs map { m =>
-      enhanceMainClassConstr(mainClassType, m)
-    }
-
-    val exportedMethodDef = irt.MethodDef(static = false,
-      irt.StringLiteral("main"), Nil, irtpe.AnyType,
-      irt.Apply(irt.This()(mainClassType), irt.Ident("main__V", Some("main")),
-        Nil)(irtpe.DoubleType))(
-      irt.OptimizerHints.empty, None)
-
-    val exportedModuleDef = irt.ModuleExportDef(mainObjectFullName)
-
-    val allDefs = List(ctorDef, exportedMethodDef, exportedModuleDef) ++
-        mainMemberDefs
-
-    val classDef = irt.ClassDef(
-      irt.Ident(mainClassName),
-      ir.ClassKind.ModuleClass,
-      Some(irt.Ident(ObjectClass)),
-      Nil,
-      None,
-      allDefs)(
-      irt.OptimizerHints.empty)
-
-    ir.Hashers.hashClassDef(classDef)
+    irt.MethodDef(
+      static = false, constrIdent, Nil, irtpe.NoType,
+      irt.Block(superCall, storeModule)
+    )(irt.OptimizerHints.empty, None)
   }
 
   // Compiling types
@@ -174,6 +121,20 @@ object Compiler {
 
   def isMainClass(classDecl: ClassDecl): Boolean =
     classDecl.members.exists(isMainMethod)
+
+  def isStatic(member: Tree): Boolean = member match {
+    case member: MethodDecl =>
+      member.modifiers.flags.contains(Modifier.STATIC)
+
+    case member: VarDecl =>
+      member.mods.flags.contains(Modifier.STATIC)
+
+    case member: Block =>
+      member.isStatic
+
+    case _ =>
+      false
+  }
 
   // Compiling constructors
 
@@ -312,24 +273,63 @@ object Compiler {
       compileTree(member)
   }
 
+  /** Creates a companion object containing
+    * all the static methods of `classDecl`. Instead of putting it inside the
+    * compiled ast, we store it in a list and join it later. */
+  def compileCompanionObject(classDecl: ClassDecl): Unit = {
+    implicit val pos = getPosition(classDecl)
+
+    // if (isMainClass(classDecl)) compileMainClass(classDecl)
+
+    val oldName = classDecl.name.str
+    val className = encodeClassName(oldName) + "$"
+    val classIdent = irt.Ident(className, Some(oldName))
+    val classType = irtpe.ClassType(className)
+
+    val superClassIdent = objectClassIdent
+    val superClassType = objectClassType
+
+    val memberDefs = classDecl.members.filter(isStatic)
+        .map(compileMember(classIdent, classType, superClassType, _))
+    val consDef = defaultConstructor(classIdent, classType)
+
+    val classDef = irt.ClassDef(
+      classIdent,
+      ir.ClassKind.ModuleClass,
+      Some(superClassIdent),
+      Nil,                       // TODO compile interfaces
+      None,
+      consDef :: memberDefs)(
+      irt.OptimizerHints.empty)
+
+    val hashed = ir.Hashers.hashClassDef(classDef)
+
+    companionObjects = hashed :: companionObjects
+  }
+
+  /** Returns both the class and its companion object */
   def compileClassDecl(classDecl: ClassDecl): irt.ClassDef = {
     implicit val pos = getPosition(classDecl)
 
-    if (isMainClass(classDecl)) compileMainClass(classDecl)
+//    if (isMainClass(classDecl)) compileMainClass(classDecl)
 
-    val className = Mangler.encodeClassFullNameIdent(classDecl.symbol)
-    val classType = Mangler.encodeClassType(classDecl.symbol)
-        .asInstanceOf[ClassType]
+    val className = encodeClassName(classDecl.name.str)
+    val classType = irtpe.ClassType(className)
+    val classIdent = irt.Ident(className)
 
     val extendsCl = compileExtendsClause(classDecl.extendsCl)
     val superClassIdent = extendsCl._1
     val superClassType = extendsCl._2
 
-    val memberDefs = classDecl.members
-        .map(compileMember(className, classType, superClassType, _))
+    val members = classDecl.members.partition(isStatic)
+    val memberDefs = members._2.map(
+      compileMember(classIdent, classType, superClassType, _))
+
+    val staticMembers = members._1
+    if (staticMembers.nonEmpty) compileCompanionObject(classDecl)
 
     val classDef = irt.ClassDef(
-      className,
+      classIdent,
       ir.ClassKind.Class,
       Some(superClassIdent),
       Nil,                       // TODO compile interfaces
@@ -568,8 +568,8 @@ object Compiler {
         compileVarDecl(stmt)
 
       case stmt: ClassDecl =>
-        if (isMainClass(stmt)) compileMainClass(stmt)
-        else compileClassDecl(stmt)
+//        if (isMainClass(stmt)) compileMainClass(stmt)
+        compileClassDecl(stmt)
 
       case stmt: Assert =>
         ??? // TODO
@@ -580,7 +580,7 @@ object Compiler {
         irt.Throw(expr)
 
       case stmt: Return =>
-        val expr = stmt.expr.map(compileExpr).getOrElse(irt.EmptyTree)
+        val expr = stmt.expr.map(compileExpr).getOrElse(irt.Undefined())
         irt.Return(expr)
 
       case stmt: Continue =>
@@ -676,9 +676,12 @@ object Compiler {
 
   def compile(compilationUnit: CompilationUnit): List[irt.Tree] = {
     implicit val pos = getPosition(compilationUnit)
+
+    companionObjects = Nil
+
     val imports = compilationUnit.imports.map(compileImport)
     val decls = compilationUnit.typeDecls.map(compileTree)
 
-    decls // TODO
+    decls ++ companionObjects // TODO
   }
 }

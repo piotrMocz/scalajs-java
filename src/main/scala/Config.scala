@@ -3,6 +3,6 @@
   * until we have a fully working compiler.
   */
 object Config {
-  val testFilePath: String = "Test2.java"
+  val testFilePath: String = "Test.java"
 
 }
