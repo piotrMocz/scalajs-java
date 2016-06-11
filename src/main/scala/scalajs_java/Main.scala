@@ -45,7 +45,9 @@ object Main {
   }
 
   private def compileAndRun(compilationUnit: CompilationUnit): Unit = {
-    val defs = Compiler.compile(compilationUnit)
+    val compRes = Compiler.compile(compilationUnit)
+    val defs = compRes._1
+    val mainObjectName = compRes._2
 
     val writer = new java.io.PrintWriter(System.out)
     try {
@@ -64,7 +66,7 @@ object Main {
     println("")
     println("")
 
-    Runner.run(linked, NullLogger, ConsoleJSConsole)
+    Runner.run(mainObjectName, linked, NullLogger, ConsoleJSConsole)
   }
 
 }

@@ -15,9 +15,7 @@ import scalajs_java.utils.Mangler
 /** Main compiler.
   */
 object Compiler {
-  final val MainObjectFullName = "main.Main"
-
-  private final val MainClassFullName = MainObjectFullName + "$"
+  var MainObjectFullName = ""
 
   private final def objectClassIdent(implicit pos: Position) =
     irt.Ident(ObjectClass, Some("java.lang.Object"))
@@ -352,6 +350,7 @@ object Compiler {
     val hashed = ir.Hashers.hashClassDef(classDef)
 
     companionObjects = hashed :: companionObjects
+    if (isMainClass(classDecl)) MainObjectFullName = className
   }
 
   /** Returns both the class and its companion object */
@@ -721,7 +720,7 @@ object Compiler {
     }
   }
 
-  def compile(compilationUnit: CompilationUnit): List[irt.ClassDef] = {
+  def compile(compilationUnit: CompilationUnit): (List[irt.ClassDef], String) = {
     implicit val pos = getPosition(compilationUnit)
 
     companionObjects = Nil
@@ -733,6 +732,6 @@ object Compiler {
           "[compile] only classes allowed as top-level declarations")
     })
 
-    decls ++ companionObjects // TODO
+    (decls ++ companionObjects, MainObjectFullName)
   }
 }

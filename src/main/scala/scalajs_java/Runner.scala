@@ -8,19 +8,19 @@ import org.scalajs.jsenv._
 
 /**
   * The code is from:
-  * https://github.com/sjrd/scalajsir-calc/blob/master/src/main/scala/calc/Linker.scala
+  * https://github.com/sjrd/scalajsir-calc/blob/master/src/main/scala/calc/Runner.scala
   */
 
 object Runner {
 
-  def run(jsFile: VirtualJSFile, logger: Logger, console: JSConsole): Unit = {
+  def run(mainObjectName: String, jsFile: VirtualJSFile, logger: Logger, console: JSConsole): Unit = {
     import org.scalajs.jsenv._
 
     val jsEnv = new nodejs.NodeJSEnv()
       .loadLibs(Seq(ResolvedJSDependency.minimal(jsFile)))
 
     val code =
-      s"""console.log(${Compiler.MainObjectFullName}().main());\n"""
+      s"""console.log($mainObjectName().main());\n"""
     val codeFile = new MemVirtualJSFile("maincode.js")
       .withContent(code)
       .withVersion(Some("maincode.js")) // unique
