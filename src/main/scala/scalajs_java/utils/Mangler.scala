@@ -1,4 +1,4 @@
-package utils
+package scalajs_java.utils
 
 /*
  * This file copies most of its contents from:
@@ -22,7 +22,7 @@ import com.sun.tools.javac.code.Symbol.{MethodSymbol, TypeSymbol, VarSymbol}
 import com.sun.tools.javac.code.{Symbol, TypeTag, Type => JType}
 import org.scalajs.core.ir.Definitions
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
-import trees._
+import scalajs_java.trees._
 
 /*
  * Name mangling

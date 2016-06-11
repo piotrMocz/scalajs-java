@@ -1,3 +1,4 @@
+package scalajs_java
 
 import org.scalajs.core.tools.logging._
 import org.scalajs.core.tools.io._

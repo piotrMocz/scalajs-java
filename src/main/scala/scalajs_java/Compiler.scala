@@ -1,3 +1,4 @@
+package scalajs_java
 
 import javax.lang.model.element.Modifier
 
@@ -8,8 +9,8 @@ import org.scalajs.core.ir.Definitions._
 import org.scalajs.core.ir.Trees.OptimizerHints
 import org.scalajs.core.ir.Types.ClassType
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
-import trees._
-import utils.Mangler
+import scalajs_java.trees._
+import scalajs_java.utils.Mangler
 
 /** Main compiler.
   */
@@ -26,7 +27,7 @@ object Compiler {
   var companionObjects: List[irt.ClassDef] = Nil
 
   def getPosition(tree: Tree): Position =  tree.pos match {
-    case trees.Position(line) => Position(Position.SourceFile(Config.testFilePath), line, 1)
+    case scalajs_java.trees.Position(line) => Position(Position.SourceFile(Config.testFilePath), line, 1)
   }
 
   /** This is the default (no-arg) constructor for a companion object

@@ -1,3 +1,5 @@
+package scalajs_java;
+
 import javax.tools.SimpleJavaFileObject;
 import java.io.*;
 import java.net.URI;

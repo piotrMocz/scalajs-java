@@ -1,3 +1,5 @@
+package scalajs_java;
+
 import com.sun.source.tree.VariableTree;
 import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.code.SymbolMetadata;
@@ -46,8 +48,9 @@ public class JTreeVisitor extends JCTree.Visitor {
 
     private void printType(JCTree tree) {
         if (tree instanceof JCTree.JCExpression &&
-                tree.type != null)
+                tree.type != null) {
             printInd("TYPE: " + tree.type.toString());
+        }
     }
 
     private void printSymbol(Symbol sym) {
@@ -948,7 +951,7 @@ public class JTreeVisitor extends JCTree.Visitor {
 
         indent();
 
-        printInd("error trees:");
+        printInd("error scalajs_java.trees:");
         acceptOpt(that.getErrorTrees());
 
         unindent();

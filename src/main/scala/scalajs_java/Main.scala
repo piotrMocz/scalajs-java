@@ -1,3 +1,5 @@
+package scalajs_java
+
 import org.scalajs.core.ir
 import org.scalajs.core.ir.Trees.ClassDef
 import ir.Printers._
@@ -5,7 +7,7 @@ import org.scalajs.core.tools.logging._
 import org.scalajs.core.tools.io._
 import org.scalajs.core.tools.jsdep.ResolvedJSDependency
 import org.scalajs.jsenv._
-import trees.{CompilationUnit, Tree}
+import scalajs_java.trees.{CompilationUnit, Tree}
 
 
 object Main {
@@ -55,9 +57,10 @@ object Main {
       writer.flush()
     }
 
+    val classDefs = defs.map(_.asInstanceOf[ClassDef])
+
     // TODO compile more classes in one file
-    val classDef = defs.head.asInstanceOf[ClassDef]
-    val linked = Linker.link(classDef, new ScalaConsoleLogger)
+    val linked = Linker.link(classDefs, new ScalaConsoleLogger)
 
     // Clearly separate the output of the program from the compiling logs
     println("")

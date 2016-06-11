@@ -1,4 +1,4 @@
-package trees
+package scalajs_java.trees
 
 import scala.language.implicitConversions
 

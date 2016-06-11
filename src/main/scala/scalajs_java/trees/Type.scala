@@ -1,4 +1,4 @@
-package trees
+package scalajs_java.trees
 
 import com.sun.tools.javac.code.{Type=>JType}
 

@@ -1,10 +1,12 @@
+package scalajs_java
+
 import com.sun.source.tree.LambdaExpressionTree.BodyKind
 import com.sun.source.tree.MemberReferenceTree
 import com.sun.tools.javac.code.TypeTag
 import com.sun.tools.javac.tree.JCTree
 
 import scala.collection.JavaConversions._
-import trees._
+import scalajs_java.trees._
 
 /** Converts the JCTree into Scala representation (from `Tree.scala`). */
 object TreeTraverse {
