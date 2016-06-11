@@ -49,6 +49,43 @@ object Compiler {
     )(irt.OptimizerHints.empty, None)
   }
 
+  /** This is a very ad-hoc solution to procude a method call like:
+    * metod(Array()), where method :: Array[String] -> Unit */
+  def emptyArrayAST(implicit pos: Position): irt.Tree = {
+    irt.AsInstanceOf(
+      irt.Apply(
+        irt.LoadModule(
+          irtpe.ClassType("s_Array$")),
+            irt.Ident("apply__sc_Seq__s_reflect_ClassTag__O",
+              Some("apply__sc_Seq__s_reflect_ClassTag__O")),
+            List(
+            irt.LoadModule(
+              irtpe.ClassType("sci_Nil$")),
+                irt.Apply(
+                irt.LoadModule(
+                  irtpe.ClassType("s_reflect_ClassTag$")),
+                    irt.Ident("apply__jl_Class__s_reflect_ClassTag",
+                      Some("apply__jl_Class__s_reflect_ClassTag")),
+                    List(
+                    irt.ClassOf(irtpe.ClassType("T"))))(
+                  irtpe.ClassType("s_reflect_ClassTag"))))(irtpe.AnyType),
+      irtpe.ArrayType("T",1))
+  }
+
+  def exportedDefaultMain(classIdent: irt.Ident, classType: irtpe.ClassType)(
+      implicit pos: Position): irt.MethodDef = {
+    val emptyArr = emptyArrayAST
+    val body = irt.Block(List(
+      irt.Apply(irt.This()(classType), irt.Ident("main__AT__V", Some("main")),
+        List(emptyArr))(irtpe.NoType),
+      irt.IntLiteral(0)
+    ))
+
+    irt.MethodDef(static = false,
+      irt.StringLiteral("main"), Nil, irtpe.AnyType, body)(
+      irt.OptimizerHints.empty, None)
+  }
+
   // Compiling types
 
   def compilePrimitiveType(tTag: TypeTag): irtpe.Type = tTag match {
@@ -280,8 +317,6 @@ object Compiler {
   def compileCompanionObject(classDecl: ClassDecl): Unit = {
     implicit val pos = getPosition(classDecl)
 
-    // if (isMainClass(classDecl)) compileMainClass(classDecl)
-
     val oldName = classDecl.name.str
     val className = encodeClassName(oldName) + "$"
     val classIdent = irt.Ident(className, Some(oldName))
@@ -294,13 +329,24 @@ object Compiler {
         .map(compileMember(classIdent, classType, superClassType, _))
     val consDef = defaultConstructor(classIdent, classType)
 
+    val mainDefs =
+      if (isMainClass(classDecl)) {
+        val exportedModuleDef = irt.ModuleExportDef(className)
+        val exportedMethod = exportedDefaultMain(classIdent, classType)
+        List(exportedMethod, exportedModuleDef)
+      } else {
+        Nil
+      }
+
+    val allDefs = consDef :: (memberDefs ++ mainDefs)
+
     val classDef = irt.ClassDef(
       classIdent,
       ir.ClassKind.ModuleClass,
       Some(superClassIdent),
       Nil,                       // TODO compile interfaces
       None,
-      consDef :: memberDefs)(
+      allDefs)(
       irt.OptimizerHints.empty)
 
     val hashed = ir.Hashers.hashClassDef(classDef)
@@ -675,13 +721,17 @@ object Compiler {
     }
   }
 
-  def compile(compilationUnit: CompilationUnit): List[irt.Tree] = {
+  def compile(compilationUnit: CompilationUnit): List[irt.ClassDef] = {
     implicit val pos = getPosition(compilationUnit)
 
     companionObjects = Nil
 
-    val imports = compilationUnit.imports.map(compileImport)
-    val decls = compilationUnit.typeDecls.map(compileTree)
+    val imports = compilationUnit.imports.map(compileImport) // TODO
+    val decls = compilationUnit.typeDecls.map({
+      case c: ClassDecl => compileClassDecl(c)
+      case _            => throw new Exception(
+          "[compile] only classes allowed as top-level declarations")
+    })
 
     decls ++ companionObjects // TODO
   }

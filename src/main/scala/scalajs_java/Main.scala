@@ -57,10 +57,8 @@ object Main {
       writer.flush()
     }
 
-    val classDefs = defs.map(_.asInstanceOf[ClassDef])
-
     // TODO compile more classes in one file
-    val linked = Linker.link(classDefs, new ScalaConsoleLogger)
+    val linked = Linker.link(defs, new ScalaConsoleLogger)
 
     // Clearly separate the output of the program from the compiling logs
     println("")
