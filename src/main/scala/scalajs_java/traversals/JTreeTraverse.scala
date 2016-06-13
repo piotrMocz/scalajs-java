@@ -1,4 +1,4 @@
-package scalajs_java
+package scalajs_java.traversals
 
 import com.sun.source.tree.LambdaExpressionTree.BodyKind
 import com.sun.source.tree.MemberReferenceTree
@@ -9,7 +9,7 @@ import scala.collection.JavaConversions._
 import scalajs_java.trees._
 
 /** Converts the JCTree into Scala representation (from `Tree.scala`). */
-object TreeTraverse {
+object JTreeTraverse {
 
   /** Traverse a java compilation unit, creating a `Trees.CompilationUnit` */
   def traverse(compilationUnit: JCTree.JCCompilationUnit): CompilationUnit = {
@@ -55,6 +55,7 @@ object TreeTraverse {
 
   private def traverseExpr(expr: JCTree.JCExpression)(
       implicit pos: Position): Expr = {
+
     val tp = JExprType(expr.`type`)
     expr match {
       case that: JCTree.LetExpr =>

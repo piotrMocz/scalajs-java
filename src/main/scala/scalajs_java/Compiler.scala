@@ -1,16 +1,15 @@
 package scalajs_java
 
 import javax.lang.model.element.Modifier
-
 import com.sun.tools.javac.code.Symbol.VarSymbol
 import com.sun.tools.javac.code.{TypeTag, Type => JType}
 import org.scalajs.core.ir
 import org.scalajs.core.ir.Definitions._
-import org.scalajs.core.ir.Trees.OptimizerHints
-import org.scalajs.core.ir.Types.ClassType
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
+
 import scalajs_java.trees._
 import scalajs_java.utils.Mangler
+import scalajs_java.Definitions
 
 /** Main compiler.
   */
@@ -26,62 +25,6 @@ object Compiler {
 
   def getPosition(tree: Tree): Position =  tree.pos match {
     case scalajs_java.trees.Position(line) => Position(Position.SourceFile(Config.testFilePath), line, 1)
-  }
-
-  /** This is the default (no-arg) constructor for a companion object
-    * that we have to include. */
-  def defaultConstructor(classIdent: irt.Ident, classType: irtpe.ClassType)(
-      implicit pos: Position): irt.MethodDef = {
-
-    val constrIdent = irt.Ident("init___", Some("<init>__"))
-
-    val superCall = irt.ApplyStatically(
-      irt.This()(classType), objectClassType,
-      constrIdent, Nil)(irtpe.NoType)
-
-    val storeModule = irt.StoreModule(classType, irt.This()(classType))
-
-    irt.MethodDef(
-      static = false, constrIdent, Nil, irtpe.NoType,
-      irt.Block(superCall, storeModule)
-    )(irt.OptimizerHints.empty, None)
-  }
-
-  /** This is a very ad-hoc solution to procude a method call like:
-    * metod(Array()), where method :: Array[String] -> Unit */
-  def emptyArrayAST(implicit pos: Position): irt.Tree = {
-    irt.AsInstanceOf(
-      irt.Apply(
-        irt.LoadModule(
-          irtpe.ClassType("s_Array$")),
-            irt.Ident("apply__sc_Seq__s_reflect_ClassTag__O",
-              Some("apply__sc_Seq__s_reflect_ClassTag__O")),
-            List(
-            irt.LoadModule(
-              irtpe.ClassType("sci_Nil$")),
-                irt.Apply(
-                irt.LoadModule(
-                  irtpe.ClassType("s_reflect_ClassTag$")),
-                    irt.Ident("apply__jl_Class__s_reflect_ClassTag",
-                      Some("apply__jl_Class__s_reflect_ClassTag")),
-                    List(
-                    irt.ClassOf(irtpe.ClassType("T"))))(
-                  irtpe.ClassType("s_reflect_ClassTag"))))(irtpe.AnyType),
-      irtpe.ArrayType("T",1))
-  }
-
-  def exportedDefaultMain(classIdent: irt.Ident, classType: irtpe.ClassType)(
-      implicit pos: Position): irt.MethodDef = {
-    val emptyArr = emptyArrayAST
-    val body = irt.Block(List(
-      irt.Apply(irt.This()(classType), irt.Ident("main__AT__V", Some("main")),
-        List(emptyArr))(irtpe.NoType),
-      irt.IntLiteral(0)
-    ))
-
-    irt.MethodDef(static = false,
-      irt.StringLiteral("main"), Nil, irtpe.AnyType, body)(
-      irt.OptimizerHints.empty, None)
   }
 
   // Compiling types
@@ -325,12 +268,12 @@ object Compiler {
 
     val memberDefs = classDecl.members.filter(isStatic)
         .map(compileMember(classIdent, classType, superClassType, _))
-    val consDef = defaultConstructor(classIdent, classType)
+    val consDef = Definitions.defaultConstructor(classIdent, classType)
 
     val mainDefs =
       if (isMainClass(classDecl)) {
         val exportedModuleDef = irt.ModuleExportDef(className)
-        val exportedMethod = exportedDefaultMain(classIdent, classType)
+        val exportedMethod = Definitions.exportedDefaultMain(classIdent, classType)
         List(exportedMethod, exportedModuleDef)
       } else {
         Nil

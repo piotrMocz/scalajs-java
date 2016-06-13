@@ -7,8 +7,10 @@ import org.scalajs.core.tools.logging._
 import org.scalajs.core.tools.io._
 import org.scalajs.core.tools.jsdep.ResolvedJSDependency
 import org.scalajs.jsenv._
-import scalajs_java.trees.{CompilationUnit, Tree}
 
+import scalajs_java.traversals.JTreeTraverse
+import scalajs_java.trees._
+import scalajs_java.traversals.Traverse
 
 object Main {
 
@@ -21,7 +23,7 @@ object Main {
 
 
     println("------------------------- Scala AST ----------------------")
-    val tree = TreeTraverse.traverse(compiler.compilationUnit)
+    val tree = JTreeTraverse.traverse(compiler.compilationUnit)
     println(tree.toString)
     println("\n\n")
 
@@ -29,6 +31,20 @@ object Main {
     val treeVisitor = new JTreeVisitor(true)
     compiler.compilationUnit.getTree.accept(treeVisitor)
     println("\n\n")
+
+    println("------------------------- Traversal ----------------------")
+    val traverser = new Traverse {
+      override def traverse(classDecl: ClassDecl): ClassDecl = {
+        println("CLASS DECL")
+        super.traverse(classDecl)
+      }
+
+      override def traverse(varDecl: VarDecl): VarDecl = {
+        println("VAR DECL")
+        super.traverse(varDecl)
+      }
+    }
+    traverser.traverse(tree)
 
     println("---------------------------- ENV -------------------------")
     compiler.printEnvs()
