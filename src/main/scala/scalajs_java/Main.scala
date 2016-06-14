@@ -8,27 +8,24 @@ import org.scalajs.core.tools.io._
 import org.scalajs.core.tools.jsdep.ResolvedJSDependency
 import org.scalajs.jsenv._
 
+import scalajs_java.compiler.Compiler
 import scalajs_java.traversals.{JTreeTraverse, ScopedTraverse, Traverse}
 import scalajs_java.trees._
 
 object Main {
 
   def main(args: Array[String]): Unit = {
-    val compiler = new CompilerInterface()
-    compiler.compile(Config.testFilePath)
-
-    println(compiler.compilationUnit.getImports)
-    println(compiler.compilationUnit.getPackageName)
-
+    val javaCompiler = new CompilerInterface()
+    javaCompiler.compile(Config.testFilePath)
 
     println("------------------------- Scala AST ----------------------")
-    val tree = JTreeTraverse.traverse(compiler.compilationUnit)
+    val tree = JTreeTraverse.traverse(javaCompiler.compilationUnit)
     println(tree.toString)
     println("\n\n")
 
     println("---------------------------- AST -------------------------")
     val treeVisitor = new JTreeVisitor(true)
-    compiler.compilationUnit.getTree.accept(treeVisitor)
+    javaCompiler.compilationUnit.getTree.accept(treeVisitor)
     println("\n\n")
 
     println("------------------------- Traversal ----------------------")
@@ -37,11 +34,11 @@ object Main {
     println(taggedTree)
 
     println("---------------------------- ENV -------------------------")
-    compiler.printEnvs()
+    javaCompiler.printEnvs()
 
     println()
     println("---------------------------- IR  -------------------------")
-    val ir = Compiler.compile(taggedTree)
+    val ir = compiler.Compiler.compile(taggedTree)
     println(ir.toString)
 
     println()

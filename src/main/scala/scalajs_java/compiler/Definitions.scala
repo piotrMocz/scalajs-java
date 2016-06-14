@@ -1,4 +1,4 @@
-package scalajs_java
+package scalajs_java.compiler
 
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 
@@ -28,8 +28,8 @@ object Definitions {
     )(irt.OptimizerHints.empty, None)
   }
 
-  /** This is a very ad-hoc solution to procude a method call like:
-    * metod(Array()), where method :: Array[String] -> Unit */
+  /** This is a very ad-hoc solution to produce a method call like:
+    * method(Array()), where method :: Array[String] -> Unit */
   def emptyArrayAST(implicit pos: Position): irt.Tree = {
     irt.AsInstanceOf(
       irt.Apply(

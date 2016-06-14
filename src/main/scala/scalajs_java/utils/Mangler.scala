@@ -168,6 +168,10 @@ object Mangler {
       sym.flatName() + (if (needsModuleClassSuffix(sym)) "$" else ""))
   }
 
+  def encodeParamIdent(sym: Symbol)(implicit pos: Position): irt.Ident = {
+    irt.Ident(sym.name.toString)
+  }
+
   // TODO
   def needsModuleClassSuffix(sym: Symbol): Boolean = false
 
