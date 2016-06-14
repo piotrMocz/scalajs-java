@@ -65,7 +65,7 @@ object Compiler {
       val tname = Mangler.mangleType(elemType)
       irtpe.ArrayType(tname, 1)
 
-    case Ident(sym, _, _) =>
+    case Ident(sym, _, _, _) =>
       if (sym.toString == "java.lang.String") irtpe.StringType
       else throw new Exception("[compileType] Cannot yet compile this type.") // TODO compile object types
 
@@ -81,7 +81,7 @@ object Compiler {
   }
 
   def isSuperCall(stmt: Statement): Boolean = stmt match {
-    case ExprStatement(MethodInv(Ident(_, name, _), _, _, _)) =>
+    case ExprStatement(MethodInv(Ident(_, name, _, _), _, _, _)) =>
       name.str == "super"
 
     case _ =>
@@ -89,8 +89,8 @@ object Compiler {
   }
 
   def isThisSelect(fieldAcc: FieldAccess): Boolean = fieldAcc.selected match {
-    case Ident(_, name, tp) => name.str == "this"
-    case _                  => false
+    case Ident(_, name, tp, _) => name.str == "this"
+    case _                     => false
   }
 
   def isMainMethod(tree: Tree): Boolean = tree match {
@@ -183,7 +183,7 @@ object Compiler {
   def compileParamRef(paramRef: Expr): irt.VarRef = {
     implicit val pos = getPosition(paramRef)
     paramRef match {
-      case Ident(sym, name, tp) =>
+      case Ident(sym, name, tp, _) =>
         val ident = irt.Ident(name)
         val tpe = compileType(tp)
 
@@ -229,7 +229,7 @@ object Compiler {
 
   def compileExtendsClause(extendsCl: Option[Expr])(
       implicit pos: Position): (irt.Ident, irtpe.ClassType) = extendsCl match {
-    case  Some(Ident(sym, _, _)) =>
+    case  Some(Ident(sym, _, _, _)) =>
       val name = Mangler.encodeClassFullNameIdent(sym)
       val tpe = Mangler.encodeClassType(sym)
 
@@ -362,7 +362,7 @@ object Compiler {
   }
 
   def compileSelectIdent(expr: Expr): irt.Ident = expr match {
-    case Ident(sym, _, _) =>
+    case Ident(sym, _, _, _) =>
       implicit val pos = getPosition(expr)
       if (sym.isLocal) Mangler.encodeLocalSym(sym)
       else Mangler.encodeFieldSym(sym.asInstanceOf[VarSymbol]) // TODO

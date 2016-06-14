@@ -320,7 +320,7 @@ object JTreeTraverse {
   }
 
   private def traverseVarDecl(varDecl: JCTree.JCVariableDecl,
-      kind: VarDeclKind = ClassMember)(implicit pos: Position): VarDecl = {
+      kind: VarKind = ClassMember)(implicit pos: Position): VarDecl = {
     val initializer = Option(varDecl.getInitializer).map(traverseExpr)
     val modifiers = traverseModifiers(varDecl.getModifiers)
     val symbol = varDecl.sym

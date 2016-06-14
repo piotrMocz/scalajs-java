@@ -96,7 +96,8 @@ case class DoubleLiteral(value: Double, tp: Type)(
 case class ClassLiteral(value: Any, tp: Type)(
     implicit val pos: Position) extends Literal
 
-case class Ident(symbol: Symbol, name: Name, tp: Type)(
+case class Ident(symbol: Symbol, name: Name, tp: Type,
+    refVar: Option[(Tree, VarKind)]=None)(
     implicit val pos: Position) extends Expr
 
 case class FieldAccess(name: Name, symbol: Symbol, selected: Expr, tp: Type)(
@@ -164,7 +165,7 @@ sealed trait Statement extends Tree with StatementTree
 
 // TODO sym: Symbol.VarSymbol
 case class VarDecl(mods: Modifiers, name: Name, nameExpr: Option[Expr],
-    symbol: VarSymbol, varType: Tree, init: Option[Expr], kind: VarDeclKind)(
+    symbol: VarSymbol, varType: Tree, init: Option[Expr], kind: VarKind)(
     implicit val pos: Position) extends Statement
 
 case class ClassDecl(name: Name, symbol: ClassSymbol, typeParams: List[TypeParam],
@@ -252,7 +253,7 @@ sealed trait BodyKind
 case object StatementKind extends BodyKind
 case object ExpressionKind extends BodyKind
 
-sealed trait VarDeclKind
-case object ClassMember extends VarDeclKind
-case object Param extends VarDeclKind
-case object LocalVar extends VarDeclKind
+sealed trait VarKind
+case object ClassMember extends VarKind
+case object Param extends VarKind
+case object LocalVar extends VarKind

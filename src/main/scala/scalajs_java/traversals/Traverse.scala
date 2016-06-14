@@ -1,9 +1,6 @@
 package scalajs_java.traversals
 
-import sun.tools.tree.CaseStatement
-
-import scalajs_java.trees.{Return, _}
-
+import scalajs_java.trees._
 /** Generic traversal of a `Tree`.
   *
   * To create a specific traversal just extend this trait and override
@@ -81,6 +78,10 @@ trait Traverse {
     ArrayTypeTree(traverse(arrayTypeTree.elemType), arrayTypeTree.tp)(
       arrayTypeTree.pos)
   }
+
+  def traverse(literal: Literal): Literal = literal
+
+  def traverse(ident: Ident): Ident = ident
 
   def traverse(fieldAccess: FieldAccess): FieldAccess = {
     FieldAccess(fieldAccess.name, fieldAccess.symbol,
@@ -269,6 +270,8 @@ trait Traverse {
       case expr: TypeUnion        => traverse(expr)
       case expr: TypeApply        => traverse(expr)
       case expr: ArrayTypeTree    => traverse(expr)
+      case expr: Literal          => traverse(expr)
+      case expr: Ident            => traverse(expr)
       case expr: FieldAccess      => traverse(expr)
       case expr: ArrayAccess      => traverse(expr)
       case expr: InstanceOf       => traverse(expr)

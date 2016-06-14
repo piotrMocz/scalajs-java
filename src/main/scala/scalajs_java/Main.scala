@@ -8,9 +8,8 @@ import org.scalajs.core.tools.io._
 import org.scalajs.core.tools.jsdep.ResolvedJSDependency
 import org.scalajs.jsenv._
 
-import scalajs_java.traversals.JTreeTraverse
+import scalajs_java.traversals.{JTreeTraverse, ScopedTraverse, Traverse}
 import scalajs_java.trees._
-import scalajs_java.traversals.Traverse
 
 object Main {
 
@@ -33,30 +32,21 @@ object Main {
     println("\n\n")
 
     println("------------------------- Traversal ----------------------")
-    val traverser = new Traverse {
-      override def traverse(classDecl: ClassDecl): ClassDecl = {
-        println("CLASS DECL")
-        super.traverse(classDecl)
-      }
-
-      override def traverse(varDecl: VarDecl): VarDecl = {
-        println("VAR DECL")
-        super.traverse(varDecl)
-      }
-    }
-    traverser.traverse(tree)
+    val refTagger = new ScopedTraverse
+    val taggedTree = refTagger.traverse(tree)
+    println(taggedTree)
 
     println("---------------------------- ENV -------------------------")
     compiler.printEnvs()
 
     println()
     println("---------------------------- IR  -------------------------")
-    val ir = Compiler.compile(tree)
+    val ir = Compiler.compile(taggedTree)
     println(ir.toString)
 
     println()
     println("------------------------ Running -------------------------")
-    compileAndRun(tree)
+    compileAndRun(taggedTree)
 
   }
 
@@ -75,7 +65,6 @@ object Main {
       writer.flush()
     }
 
-    // TODO compile more classes in one file
     val linked = Linker.link(defs, new ScalaConsoleLogger)
 
     // Clearly separate the output of the program from the compiling logs
