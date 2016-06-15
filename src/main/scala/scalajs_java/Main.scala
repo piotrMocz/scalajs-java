@@ -9,7 +9,7 @@ import org.scalajs.core.tools.jsdep.ResolvedJSDependency
 import org.scalajs.jsenv._
 
 import scalajs_java.compiler.Compiler
-import scalajs_java.traversals.{JTreeTraverse, ScopedTraverse, Traverse}
+import scalajs_java.traversals.{JTreeTraverse, OperationsTraverse, ScopedTraverse, Traverse}
 import scalajs_java.trees._
 
 object Main {
@@ -28,9 +28,15 @@ object Main {
     javaCompiler.compilationUnit.getTree.accept(treeVisitor)
     println("\n\n")
 
-    println("------------------------- Traversal ----------------------")
+    println("------------------------- Traversals ----------------------")
+    val opTransformer = new OperationsTraverse
+    val opTree = opTransformer.traverse(tree)
+    println("After operator transformation:")
+    println(opTree)
+
     val refTagger = new ScopedTraverse
-    val taggedTree = refTagger.traverse(tree)
+    val taggedTree = refTagger.traverse(opTree)
+    println("After reference tagging:")
     println(taggedTree)
 
     println("---------------------------- ENV -------------------------")

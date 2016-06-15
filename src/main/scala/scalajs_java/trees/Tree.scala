@@ -1,13 +1,13 @@
 package scalajs_java.trees
 
 import scala.language.implicitConversions
-
 import com.sun.tools.javac.code.{Symbol, TypeTag, Type => JType}
 import com.sun.tools.javac.util.{Name => JName}
 import javax.lang.model.element.Modifier
 import javax.lang.model.`type`.TypeKind
 
 import com.sun.tools.javac.code.Symbol.{ClassSymbol, MethodSymbol, VarSymbol}
+import com.sun.tools.javac.tree.JCTree.Tag
 
 
 // Tree
@@ -112,13 +112,13 @@ case class InstanceOf(clazz: Tree, expr: Expr, tp: Type)(
 case class TypeCast(clazz: Tree, expr: Expr, tp: Type)(
     implicit val pos: Position) extends Expr
 
-case class Binary(op: Symbol, left: Expr, right: Expr, tp: Type)(
+case class Binary(op: Tag, left: Expr, right: Expr, tp: Type)(
     implicit val pos: Position) extends Expr
 
-case class Unary(op: Symbol, arg: Expr, tp: Type)(
+case class Unary(op: Tag, arg: Expr, tp: Type)(
     implicit val pos: Position) extends Expr
 
-case class AssignOp(variable: Expr, op: Symbol, expr: Expr, tp: Type)(
+case class AssignOp(variable: Expr, op: Tag, expr: Expr, tp: Type)(
     implicit val pos: Position) extends Expr
 
 case class Assign(variable: Expr, expr: Expr, tp: Type)(

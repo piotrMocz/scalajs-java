@@ -4,6 +4,7 @@ import javax.lang.model.element.Modifier
 
 import com.sun.tools.javac.code.Symbol.VarSymbol
 import com.sun.tools.javac.code.{TypeTag, Type => JType}
+import com.sun.tools.javac.tree.JCTree.Tag
 import org.scalajs.core.ir
 import org.scalajs.core.ir.Definitions._
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
@@ -11,7 +12,6 @@ import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 import scalajs_java.trees._
 import scalajs_java.utils.Mangler
 import scalajs_java.Config
-
 import scalajs_java.compiler.Predicates
 
 /** Main compiler.
@@ -256,7 +256,7 @@ object Compiler {
     val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
       irtpe.zeroOf(tpe))
 
-    irt.VarDef(name, tpe, mutable = false, nameExpr)
+    irt.VarDef(name, tpe, mutable = true, nameExpr)
   }
 
   def compileSelectIdent(expr: Expr): irt.Ident = expr match {
@@ -363,11 +363,18 @@ object Compiler {
       case expr: TypeCast =>
         ???
 
-      case expr: Binary =>
-        ???
+      case Binary(op, left, right, tp) =>
+        val opC = OpCompiler.compileBinopCode(op, tp)
+        val leftC = compileExpr(left)
+        val rightC = compileExpr(right)
 
-      case expr: Unary =>
-        ???
+        irt.BinaryOp(opC, leftC, rightC)
+
+      case Unary(op, arg, tp) =>
+        val opC = OpCompiler.compileUnopCode(op, tp)
+        val argC = compileExpr(arg)
+
+        irt.UnaryOp(opC, argC)
 
       case expr: AssignOp =>
         ???

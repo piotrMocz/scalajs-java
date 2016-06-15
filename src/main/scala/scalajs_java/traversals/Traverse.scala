@@ -108,11 +108,11 @@ trait Traverse {
       binary.tp)(binary.pos)
   }
 
-  def traverse(unary: Unary): Unary = {
+  def traverse(unary: Unary): Expr = {
     Unary(unary.op, traverse(unary.arg), unary.tp)(unary.pos)
   }
 
-  def traverse(assignOp: AssignOp): AssignOp = {
+  def traverse(assignOp: AssignOp): Expr = {
     AssignOp(traverse(assignOp.variable), assignOp.op,
       traverse(assignOp.expr), assignOp.tp)(assignOp.pos)
   }

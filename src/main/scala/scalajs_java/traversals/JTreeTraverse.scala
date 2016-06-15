@@ -501,7 +501,7 @@ object JTreeTraverse {
 
   private def traverseBinary(binary: JCTree.JCBinary)(
       implicit pos: Position): Binary = {
-    val op = binary.getOperator
+    val op = binary.getTag
     val left = traverseExpr(binary.getLeftOperand)
     val right = traverseExpr(binary.getRightOperand)
     val tp = JExprType(binary.`type`)
@@ -511,7 +511,7 @@ object JTreeTraverse {
 
   private def traverseUnary(unary: JCTree.JCUnary)(
       implicit pos: Position): Unary = {
-    val op = unary.getOperator
+    val op = unary.getTag
     val arg = traverseExpr(unary.getExpression)
     val tp = JExprType(unary.`type`)
 
@@ -521,7 +521,7 @@ object JTreeTraverse {
   private def traverseAssignOp(assignOp: JCTree.JCAssignOp)(
       implicit pos: Position): AssignOp = {
     val variable = traverseExpr(assignOp.getVariable)
-    val op = assignOp.getOperator
+    val op = assignOp.getTag
     val expr = traverseExpr(assignOp.getExpression)
     val tp = JExprType(assignOp.`type`)
 
