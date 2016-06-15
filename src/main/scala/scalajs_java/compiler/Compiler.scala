@@ -12,6 +12,8 @@ import scalajs_java.trees._
 import scalajs_java.utils.Mangler
 import scalajs_java.Config
 
+import scalajs_java.compiler.Predicates
+
 /** Main compiler.
   */
 object Compiler {
@@ -28,48 +30,6 @@ object Compiler {
     case scalajs_java.trees.Position(line) => Position(Position.SourceFile(Config.testFilePath), line, 1)
   }
 
-  // Utilty methods
-
-  def isConstructor(tree: Tree): Boolean = tree match {
-    case tree: MethodDecl => tree.symbol.isConstructor
-    case _                => false
-  }
-
-  def isSuperCall(stmt: Statement): Boolean = stmt match {
-    case ExprStatement(MethodInv(Ident(_, name, _, _), _, _, _)) =>
-      name.str == "super"
-
-    case _ =>
-      false
-  }
-
-  def isThisSelect(fieldAcc: FieldAccess): Boolean = fieldAcc.selected match {
-    case Ident(_, name, tp, _) => name.str == "this"
-    case _                     => false
-  }
-
-  def isMainMethod(tree: Tree): Boolean = tree match {
-    case m: MethodDecl => m.name.str == "main"
-    case _             => false
-  }
-
-  def isMainClass(classDecl: ClassDecl): Boolean =
-    classDecl.members.exists(isMainMethod)
-
-  def isStatic(member: Tree): Boolean = member match {
-    case member: MethodDecl =>
-      member.modifiers.flags.contains(Modifier.STATIC)
-
-    case member: VarDecl =>
-      member.mods.flags.contains(Modifier.STATIC)
-
-    case member: Block =>
-      member.isStatic
-
-    case _ =>
-      false
-  }
-
   // Compiling constructors
 
   /** Compiles statement of a constructor body
@@ -83,7 +43,7 @@ object Compiler {
       stmt: Statement): irt.Tree = {
     implicit val pos = getPosition(stmt)
 
-    if (isSuperCall(stmt)) {
+    if (Predicates.isSuperCall(stmt)) {
       val superArgs = stmt match {
         case ExprStatement(MethodInv(_, _, args, _)) =>
           args.map(compileParamRef)
@@ -200,7 +160,7 @@ object Compiler {
 
   def compileMember(className: irt.Ident, classType: irtpe.ClassType,
       superClassType: irtpe.ClassType, member: Tree): irt.Tree = member match {
-    case member: MethodDecl if isConstructor(member) =>
+    case member: MethodDecl if Predicates.isConstructor(member) =>
       compileConstructor(className, classType, superClassType, member)
 
     case member =>
@@ -221,12 +181,12 @@ object Compiler {
     val superClassIdent = objectClassIdent
     val superClassType = objectClassType
 
-    val memberDefs = classDecl.members.filter(isStatic)
+    val memberDefs = classDecl.members.filter(Predicates.isStatic)
         .map(compileMember(classIdent, classType, superClassType, _))
     val consDef = Definitions.defaultConstructor(classIdent, classType)
 
     val mainDefs =
-      if (isMainClass(classDecl)) {
+      if (Predicates.isMainClass(classDecl)) {
         val exportedModuleDef = irt.ModuleExportDef(className)
         val exportedMethod = Definitions.exportedDefaultMain(classIdent, classType)
         List(exportedMethod, exportedModuleDef)
@@ -248,7 +208,7 @@ object Compiler {
     val hashed = ir.Hashers.hashClassDef(classDef)
 
     companionObjects = hashed :: companionObjects
-    if (isMainClass(classDecl)) MainObjectFullName = className
+    if (Predicates.isMainClass(classDecl)) MainObjectFullName = className
   }
 
   /** Returns both the class and its companion object */
@@ -265,7 +225,7 @@ object Compiler {
     val superClassIdent = extendsCl._1
     val superClassType = extendsCl._2
 
-    val members = classDecl.members.partition(isStatic)
+    val members = classDecl.members.partition(Predicates.isStatic)
     val memberDefs = members._2.map(
       compileMember(classIdent, classType, superClassType, _))
 
@@ -315,7 +275,7 @@ object Compiler {
     val item = Mangler.encodeFieldSym(fieldAcc.symbol)
     val tpe = TypeCompiler.compileType(fieldAcc.tp)
     val qualifier =
-    if (isThisSelect(fieldAcc)) {
+    if (Predicates.isThisSelect(fieldAcc)) {
         irt.This()(irtpe.NoType)
       } else {
         val ident = compileSelectIdent(fieldAcc.selected)
@@ -454,12 +414,17 @@ object Compiler {
   }
 
   def compileMethodInv(methodInv: MethodInv): irt.Tree = {
-    // we need to translate a super(...) call explicitly
-    val args = methodInv.args.map(compileExpr)
-    val sel = compileExpr(methodInv.methodSel)
-    val typeArgs = methodInv.typeArgs.map(TypeCompiler.compileType)
+    implicit val pos = getPosition(methodInv)
+    if (Predicates.isPrintMethodInv(methodInv)) {
+      val body = compileTree(methodInv.args.head)
+      Definitions.printMethod(body)
+    } else {
+      val args = methodInv.args.map(compileExpr)
+      val sel = compileExpr(methodInv.methodSel)
+      val typeArgs = methodInv.typeArgs.map(TypeCompiler.compileType)
 
-    null
+      null
+    }
   }
 
 
@@ -484,8 +449,11 @@ object Compiler {
       case DoubleLiteral(value, _) =>
         irt.DoubleLiteral(value)
 
-      case ClassLiteral(value, _) =>
-        ???
+      case ClassLiteral(value, tp) =>
+        if (Predicates.isStringType(tp))
+          irt.StringLiteral(value.asInstanceOf[String])
+        else
+          ???
     }
   }
 

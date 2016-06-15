@@ -53,8 +53,11 @@ object Definitions {
 
   /** Print method is a special one, because we use `Predef.println`
     * instead of java's `System.out.println`. */
-  def printMethod(tree: irt.Tree): irt.Tree = {
-    irt.EmptyTree
+  def printMethod(printed: irt.Tree)(implicit pos: Position): irt.Tree = {
+    irt.Apply(
+      irt.LoadModule(irtpe.ClassType("s_Predef$")),
+        irt.Ident("println__O__V", Some("println__O__V")),
+        List(printed))(irtpe.NoType)
   }
 
   def exportedDefaultMain(classIdent: irt.Ident, classType: irtpe.ClassType)(
