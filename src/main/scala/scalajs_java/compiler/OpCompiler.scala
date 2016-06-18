@@ -19,69 +19,77 @@ object OpCompiler {
         }
 
         case TypeTag.INT | TypeTag.SHORT | TypeTag.BYTE => op match {
-          case Tag.PLUS   => BinaryOp.Int_+
-          case Tag.MINUS  => BinaryOp.Int_-
-          case Tag.MUL    => BinaryOp.Int_*
-          case Tag.DIV    => BinaryOp.Int_/
-          case Tag.MOD    => BinaryOp.Int_%
-          case Tag.BITAND => BinaryOp.Int_&
-          case Tag.BITOR  => BinaryOp.Int_|
-          case Tag.SL     => BinaryOp.Int_<<
-          case Tag.SR     => BinaryOp.Int_>>
-          case Tag.USR    => BinaryOp.Int_>>>
-          case Tag.EQ     => BinaryOp.Num_==
-          case Tag.NE     => BinaryOp.Num_!=
-          case Tag.LT     => BinaryOp.Num_<
-          case Tag.LE     => BinaryOp.Num_<=
-          case Tag.GT     => BinaryOp.Num_>
-          case Tag.GE     => BinaryOp.Num_>=
+          case Tag.PLUS                 => BinaryOp.Int_+
+          case Tag.MINUS                => BinaryOp.Int_-
+          case Tag.MUL                  => BinaryOp.Int_*
+          case Tag.DIV                  => BinaryOp.Int_/
+          case Tag.MOD                  => BinaryOp.Int_%
+          case Tag.BITAND               => BinaryOp.Int_&
+          case Tag.BITOR                => BinaryOp.Int_|
+          case Tag.SL                   => BinaryOp.Int_<<
+          case Tag.SR                   => BinaryOp.Int_>>
+          case Tag.USR                  => BinaryOp.Int_>>>
+          case Tag.EQ                   => BinaryOp.Num_==
+          case Tag.NE                   => BinaryOp.Num_!=
+          case Tag.LT                   => BinaryOp.Num_<
+          case Tag.LE                   => BinaryOp.Num_<=
+          case Tag.GT                   => BinaryOp.Num_>
+          case Tag.GE                   => BinaryOp.Num_>=
+          case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Int_-
+          case Tag.PREINC | Tag.POSTINC => BinaryOp.Int_+
         }
 
         case TypeTag.LONG => op match {
-          case Tag.PLUS   => BinaryOp.Long_+
-          case Tag.MINUS  => BinaryOp.Long_-
-          case Tag.MUL    => BinaryOp.Long_*
-          case Tag.DIV    => BinaryOp.Long_/
-          case Tag.MOD    => BinaryOp.Long_%
-          case Tag.BITAND => BinaryOp.Long_&
-          case Tag.BITOR  => BinaryOp.Long_|
-          case Tag.SL     => BinaryOp.Long_<<
-          case Tag.SR     => BinaryOp.Long_>>
-          case Tag.USR    => BinaryOp.Long_>>>
-          case Tag.EQ     => BinaryOp.Long_==
-          case Tag.NE     => BinaryOp.Long_!=
-          case Tag.LT     => BinaryOp.Long_<
-          case Tag.LE     => BinaryOp.Long_<=
-          case Tag.GT     => BinaryOp.Long_>
-          case Tag.GE     => BinaryOp.Long_>=
+          case Tag.PLUS                 => BinaryOp.Long_+
+          case Tag.MINUS                => BinaryOp.Long_-
+          case Tag.MUL                  => BinaryOp.Long_*
+          case Tag.DIV                  => BinaryOp.Long_/
+          case Tag.MOD                  => BinaryOp.Long_%
+          case Tag.BITAND               => BinaryOp.Long_&
+          case Tag.BITOR                => BinaryOp.Long_|
+          case Tag.SL                   => BinaryOp.Long_<<
+          case Tag.SR                   => BinaryOp.Long_>>
+          case Tag.USR                  => BinaryOp.Long_>>>
+          case Tag.EQ                   => BinaryOp.Long_==
+          case Tag.NE                   => BinaryOp.Long_!=
+          case Tag.LT                   => BinaryOp.Long_<
+          case Tag.LE                   => BinaryOp.Long_<=
+          case Tag.GT                   => BinaryOp.Long_>
+          case Tag.GE                   => BinaryOp.Long_>=
+          case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Long_-
+          case Tag.PREINC | Tag.POSTINC => BinaryOp.Long_+
         }
 
         case TypeTag.FLOAT => op match {
-          case Tag.PLUS   => BinaryOp.Float_+
-          case Tag.MINUS  => BinaryOp.Float_-
-          case Tag.MUL    => BinaryOp.Float_*
-          case Tag.DIV    => BinaryOp.Float_/
-          case Tag.MOD    => BinaryOp.Float_%
-          case Tag.EQ     => BinaryOp.Num_==
-          case Tag.NE     => BinaryOp.Num_!=
-          case Tag.LT     => BinaryOp.Num_<
-          case Tag.LE     => BinaryOp.Num_<=
-          case Tag.GT     => BinaryOp.Num_>
-          case Tag.GE     => BinaryOp.Num_>=
+          case Tag.PLUS                 => BinaryOp.Float_+
+          case Tag.MINUS                => BinaryOp.Float_-
+          case Tag.MUL                  => BinaryOp.Float_*
+          case Tag.DIV                  => BinaryOp.Float_/
+          case Tag.MOD                  => BinaryOp.Float_%
+          case Tag.EQ                   => BinaryOp.Num_==
+          case Tag.NE                   => BinaryOp.Num_!=
+          case Tag.LT                   => BinaryOp.Num_<
+          case Tag.LE                   => BinaryOp.Num_<=
+          case Tag.GT                   => BinaryOp.Num_>
+          case Tag.GE                   => BinaryOp.Num_>=
+          case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Float_-
+          case Tag.PREINC | Tag.POSTINC => BinaryOp.Float_+
         }
 
         case TypeTag.DOUBLE => op match {
-          case Tag.PLUS   => BinaryOp.Double_+
-          case Tag.MINUS  => BinaryOp.Double_-
-          case Tag.MUL    => BinaryOp.Double_*
-          case Tag.DIV    => BinaryOp.Double_/
-          case Tag.MOD    => BinaryOp.Double_%
-          case Tag.EQ     => BinaryOp.Num_==
-          case Tag.NE     => BinaryOp.Num_!=
-          case Tag.LT     => BinaryOp.Num_<
-          case Tag.LE     => BinaryOp.Num_<=
-          case Tag.GT     => BinaryOp.Num_>
-          case Tag.GE     => BinaryOp.Num_>=
+          case Tag.PLUS                 => BinaryOp.Double_+
+          case Tag.MINUS                => BinaryOp.Double_-
+          case Tag.MUL                  => BinaryOp.Double_*
+          case Tag.DIV                  => BinaryOp.Double_/
+          case Tag.MOD                  => BinaryOp.Double_%
+          case Tag.EQ                   => BinaryOp.Num_==
+          case Tag.NE                   => BinaryOp.Num_!=
+          case Tag.LT                   => BinaryOp.Num_<
+          case Tag.LE                   => BinaryOp.Num_<=
+          case Tag.GT                   => BinaryOp.Num_>
+          case Tag.GE                                               => BinaryOp.Num_>=
+          case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Double_-
+          case Tag.PREINC | Tag.POSTINC => BinaryOp.Double_+
         }
 
         case _ =>

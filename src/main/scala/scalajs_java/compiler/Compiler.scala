@@ -285,13 +285,6 @@ object Compiler {
     irt.Select(qualifier, item)(tpe)
   }
 
-  def compileAssign(assign: Assign): irt.Assign = {
-    implicit val pos = getPosition(assign)
-    val lhs = compileExpr(assign.variable)
-    val rhs = compileExpr(assign.expr)
-    irt.Assign(lhs, rhs)
-  }
-
   def compileIdent(ident: Ident): irt.VarRef = {
     implicit val pos = getPosition(ident)
     val sym = ident.symbol
@@ -371,16 +364,33 @@ object Compiler {
         irt.BinaryOp(opC, leftC, rightC)
 
       case Unary(op, arg, tp) =>
-        val opC = OpCompiler.compileUnopCode(op, tp)
+        val opC = OpCompiler.compileBinopCode(op, tp)
         val argC = compileExpr(arg)
+        val binOpC = irt.BinaryOp(opC, argC, irt.IntLiteral(1))
+        val assignC = irt.Assign(argC, binOpC)
 
-        irt.UnaryOp(opC, argC)
+        op match {
+          case Tag.PREINC | Tag.PREDEC =>
+            irt.Block(assignC, argC)
+
+          case Tag.POSTINC | Tag.POSTDEC =>
+            val tmpType = TypeCompiler.compileType(tp)
+            val tmpName = irt.Ident("tmp12345")  // TODO
+            val tmpVarDef = irt.VarDef(tmpName, tmpType, mutable = false, argC)
+            val tmpVarRef = irt.VarRef(tmpName)(tmpType)
+
+            irt.Block(tmpVarDef, assignC, tmpVarRef)
+        }
 
       case expr: AssignOp =>
         ???
 
-      case expr: Assign =>
-        compileAssign(expr)
+      case Assign(lhs, rhs, _) =>
+        val lhsC = compileExpr(lhs)
+        val rhsC = compileExpr(rhs)
+        val assignment = irt.Assign(lhsC, rhsC)
+
+        irt.Block(assignment, lhsC)
 
       case Parens(expr, _) =>
         compileExpr(expr)  // ???
