@@ -1,5 +1,8 @@
 package scalajs_java.traversals
 
+import com.sun.tools.javac.code.Symbol.TypeSymbol
+import com.sun.tools.javac.code.Type.JCPrimitiveType
+import com.sun.tools.javac.code.TypeTag
 import com.sun.tools.javac.tree.JCTree.Tag
 
 import scalajs_java.trees._
@@ -31,6 +34,17 @@ class OperationsTraverse extends Traverse {
       super.traverse(assignOp.expr), assignOp.tp)
 
     Assign(super.traverse(assignOp.variable), binop, assignOp.tp)
+  }
+
+  override def traverse(forLoop: ForLoop): Statement = {
+    implicit val pos = forLoop.pos
+
+    val cond = forLoop.cond.getOrElse(
+      BooleanLiteral(true, JExprType(new JCPrimitiveType(TypeTag.BOOLEAN, null))))
+    val body = Block(forLoop.body :: forLoop.update, isStatic = false)
+    val loop = WhileLoop(cond, body)
+
+    Block(forLoop.init :+ loop, isStatic = false)
   }
 
 }

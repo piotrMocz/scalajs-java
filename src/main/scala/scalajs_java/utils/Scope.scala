@@ -39,7 +39,7 @@ trait Scope {
 
   /** The key method of this module, used to perform
     * computations with a temporary scope update */
-  def withScope[T](scopeElems: List[Tree], tree: T)(f: T => T): T = {
+  def withScope[T, S](scopeElems: List[Tree], tree: T)(f: T => S): S = {
     val varInfos = getVarInfos(scopeElems)
     varInfos.foreach(vi => addToScope(vi._1, vi._2, vi._3))
 
@@ -48,6 +48,6 @@ trait Scope {
     res
   }
 
-  def withScope[T](scopeElem: Tree, tree: T)(f: T => T): T =
-    withScope[T](List(scopeElem), tree)(f)
+  def withScope[T, S](scopeElem: Tree, tree: T)(f: T => S): S =
+    withScope[T, S](List(scopeElem), tree)(f)
 }

@@ -226,22 +226,22 @@ trait Traverse {
       labeledStmt.pos)
   }
 
-  def traverse(enhForLoop: EnhancedForLoop): EnhancedForLoop = {
+  def traverse(enhForLoop: EnhancedForLoop): Statement = {
     EnhancedForLoop(traverse(enhForLoop.variable),
       traverse(enhForLoop.expr), traverse(enhForLoop.body))(enhForLoop.pos)
   }
 
-  def traverse(forLoop: ForLoop): ForLoop = {
+  def traverse(forLoop: ForLoop): Statement = {
     ForLoop(forLoop.init.map(traverse), forLoop.cond.map(traverse),
       forLoop.update.map(traverse), traverse(forLoop.body))(forLoop.pos)
   }
 
-  def traverse(whileLoop: WhileLoop): WhileLoop = {
+  def traverse(whileLoop: WhileLoop): Statement = {
     WhileLoop(traverse(whileLoop.cond), traverse(whileLoop.body))(
       whileLoop.pos)
   }
 
-  def traverse(doWhileLoop: DoWhileLoop): DoWhileLoop = {
+  def traverse(doWhileLoop: DoWhileLoop): Statement = {
     DoWhileLoop(traverse(doWhileLoop.cond), traverse(doWhileLoop.body))(
       doWhileLoop.pos)
   }

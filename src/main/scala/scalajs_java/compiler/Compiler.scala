@@ -251,12 +251,12 @@ object Compiler {
     val name = Mangler.encodeLocalSym(varDecl.symbol)
 
     val tpe = TypeCompiler.compileType(varDecl.varType)
-    val init = varDecl.init.map(compileExpr)
+    val init = varDecl.init.map(compileExpr).getOrElse(irtpe.zeroOf(tpe))
     val modifiers = varDecl.mods
     val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
       irtpe.zeroOf(tpe))
 
-    irt.VarDef(name, tpe, mutable = true, nameExpr)
+    irt.VarDef(name, tpe, mutable = true, init)
   }
 
   def compileSelectIdent(expr: Expr): irt.Ident = expr match {
@@ -357,14 +357,14 @@ object Compiler {
         ???
 
       case Binary(op, left, right, tp) =>
-        val opC = OpCompiler.compileBinopCode(op, tp)
+        val opC = OpCompiler.compileBinopCode(op, left.tp)
         val leftC = compileExpr(left)
         val rightC = compileExpr(right)
 
         irt.BinaryOp(opC, leftC, rightC)
 
       case Unary(op, arg, tp) =>
-        val opC = OpCompiler.compileBinopCode(op, tp)
+        val opC = OpCompiler.compileBinopCode(op, arg.tp)
         val argC = compileExpr(arg)
         val binOpC = irt.BinaryOp(opC, argC, irt.IntLiteral(1))
         val assignC = irt.Assign(argC, binOpC)
@@ -376,7 +376,7 @@ object Compiler {
           case Tag.POSTINC | Tag.POSTDEC =>
             val tmpType = TypeCompiler.compileType(tp)
             val tmpName = irt.Ident("tmp12345")  // TODO
-            val tmpVarDef = irt.VarDef(tmpName, tmpType, mutable = false, argC)
+            val tmpVarDef = irt.VarDef(tmpName, tmpType, mutable = true, argC)
             val tmpVarRef = irt.VarRef(tmpName)(tmpType)
 
             irt.Block(tmpVarDef, assignC, tmpVarRef)
@@ -559,8 +559,11 @@ object Compiler {
       case stmt: ForLoop =>
         ???
 
-      case stmt: WhileLoop =>
-        ???
+      case WhileLoop(cond, body) =>
+        val condC = compileExpr(cond)
+        val bodyC = compileStatement(body)
+
+        irt.While(condC, bodyC)
 
       case stmt: DoWhileLoop =>
         ???

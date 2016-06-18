@@ -11,6 +11,15 @@ class Test {
         double y = 0.0;
         y += 42;
 
+        for (int i = 0; i < 3; i++)
+            System.out.println("for loop");
+
+        int j = 5;
+        while (j > 0) {
+            System.out.println("while loop");
+            j--;
+        }
+
         System.out.println(y++);
         System.out.println(++y);
         System.out.println(2 + 2);

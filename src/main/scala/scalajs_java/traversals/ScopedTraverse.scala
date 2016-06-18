@@ -8,23 +8,23 @@ import scalajs_java.utils.Scope
 class ScopedTraverse extends Traverse with Scope { self =>
 
   override def traverse(classDecl: ClassDecl): ClassDecl = {
-    withScope[ClassDecl](classDecl.members, classDecl)(super.traverse)
+    withScope[ClassDecl, ClassDecl](classDecl.members, classDecl)(super.traverse)
   }
 
   override def traverse(methodDecl: MethodDecl): MethodDecl = {
-    withScope[MethodDecl](methodDecl.params, methodDecl)(super.traverse)
+    withScope[MethodDecl, MethodDecl](methodDecl.params, methodDecl)(super.traverse)
   }
 
   override def traverse(block: Block) = {
-    withScope[Block](block.statements, block)(super.traverse)
+    withScope[Block, Block](block.statements, block)(super.traverse)
   }
 
-  override def traverse(forLoop: ForLoop) = {
-    withScope[ForLoop](forLoop.init, forLoop)(super.traverse)
+  override def traverse(forLoop: ForLoop): Statement = {
+    withScope[ForLoop, Statement](forLoop.init, forLoop)(super.traverse)
   }
 
-  override def traverse(enhancedForLoop: EnhancedForLoop): EnhancedForLoop = {
-    withScope[EnhancedForLoop](enhancedForLoop.variable, enhancedForLoop)(
+  override def traverse(enhancedForLoop: EnhancedForLoop): Statement = {
+    withScope[EnhancedForLoop, Statement](enhancedForLoop.variable, enhancedForLoop)(
       super.traverse)
   }
 
