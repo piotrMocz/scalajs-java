@@ -27,7 +27,7 @@ object Compiler {
   var companionObjects: List[irt.ClassDef] = Nil
 
   def getPosition(tree: Tree): Position =  tree.pos match {
-    case scalajs_java.trees.Position(line) => Position(Position.SourceFile(Config.testFilePath), line, 1)
+    case scalajs_java.trees.Position(line) => Position(Position.SourceFile(Config.testFilePath), line, 0)
   }
 
   // Compiling constructors
