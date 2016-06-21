@@ -23,8 +23,8 @@ class Test {
         System.out.println(y++);
         System.out.println(++y);
         System.out.println(2 + 2);
-        System.out.println((y = 23.0) + 4.5))
-        System.out.println(y)
+        System.out.println((y = 23.0) + 4.5);
+        System.out.println(y);
         System.out.println("Hello world!!!");
     }
 }
