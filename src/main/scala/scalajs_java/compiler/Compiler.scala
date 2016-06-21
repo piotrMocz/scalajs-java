@@ -1,9 +1,7 @@
 package scalajs_java.compiler
 
-import javax.lang.model.element.Modifier
 
 import com.sun.tools.javac.code.Symbol.VarSymbol
-import com.sun.tools.javac.code.{TypeTag, Type => JType}
 import com.sun.tools.javac.tree.JCTree.Tag
 import org.scalajs.core.ir
 import org.scalajs.core.ir.Definitions._
@@ -12,7 +10,6 @@ import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 import scalajs_java.trees._
 import scalajs_java.utils.Mangler
 import scalajs_java.Config
-import scalajs_java.compiler.Predicates
 
 /** Main compiler.
   */
@@ -47,6 +44,9 @@ object Compiler {
       val superArgs = stmt match {
         case ExprStatement(MethodInv(_, _, args, _)) =>
           args.map(compileParamRef)
+
+        case _ =>
+          throw new Exception("[compileConstructorStmt] unexpected tree.")
       }
       // TODO constrName is actually a constructor of the super class
       irt.ApplyStatically(irt.This()(classType), superClassType, constrName,
@@ -298,6 +298,10 @@ object Compiler {
 
       case Some((_, Param)) =>
         Mangler.encodeParamIdent(sym)
+
+      case _ =>
+        throw new Exception(
+          "[compileIdent] couldn't determine the referenced var.")
     }
 
     irt.VarRef(name)(tpe)
@@ -380,6 +384,10 @@ object Compiler {
             val tmpVarRef = irt.VarRef(tmpName)(tmpType)
 
             irt.Block(tmpVarDef, assignC, tmpVarRef)
+
+          case _ =>
+            throw new Exception(
+              s"[compileExpr -- Unary] Not a known unary tag: $op.")
         }
 
       case expr: AssignOp =>

@@ -45,6 +45,7 @@ public class CompilerInterface {
         }
     }
 
+    /** Compile a file from disk */
     public void compile(String filename) {
         JavaFileObject jfo = new SourceObject(filename);
         ArrayList<JavaFileObject> jfObjects = new ArrayList<JavaFileObject>();
@@ -54,6 +55,19 @@ public class CompilerInterface {
                 compiler.enterTrees(compiler.parseFiles(jfObjects));
 
         // this performs the typechecking:
+        this.attrs = compiler.attribute(compiler.todo);
+        this.compilationUnit = compilationUnits.head;
+    }
+
+    /** Compile source string */
+    public void compile(String name, String source) {
+        JavaFileObject jfo = new SourceObject(name, source);
+        ArrayList<JavaFileObject> jfObjects = new ArrayList<JavaFileObject>();
+        jfObjects.add(jfo);
+
+        List<JCCompilationUnit> compilationUnits =
+                compiler.enterTrees(compiler.parseFiles(jfObjects));
+
         this.attrs = compiler.attribute(compiler.todo);
         this.compilationUnit = compilationUnits.head;
     }

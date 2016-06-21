@@ -23,6 +23,12 @@ class SourceObject extends SimpleJavaFileObject {
         }
     }
 
+    SourceObject(String name, String source) {
+        super(URI.create(String.format("string:///%s%s", name.replaceAll("\\.", "/"),
+                Kind.SOURCE.extension)), Kind.SOURCE);
+        this.source = source;
+    }
+
     @Override
     public CharSequence getCharContent(boolean ignoreEncodingErrors) {
         return this.source;

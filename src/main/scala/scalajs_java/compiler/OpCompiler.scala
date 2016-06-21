@@ -16,6 +16,8 @@ object OpCompiler {
           case Tag.NE  => BinaryOp.Boolean_!=
           case Tag.AND => BinaryOp.Boolean_&
           case Tag.OR  => BinaryOp.Boolean_|
+          case _       => throw new Exception(
+            s"[compileBinopCode] wrong tag ${jtype.getTag}")
         }
 
         case TypeTag.INT | TypeTag.CHAR | TypeTag.SHORT | TypeTag.BYTE =>
@@ -38,6 +40,8 @@ object OpCompiler {
             case Tag.GE                   => BinaryOp.Num_>=
             case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Int_-
             case Tag.PREINC | Tag.POSTINC => BinaryOp.Int_+
+            case _                        => throw new Exception(
+                s"[compileBinopCode] wrong tag ${jtype.getTag}")
         }
 
         case TypeTag.LONG => op match {
@@ -59,6 +63,8 @@ object OpCompiler {
           case Tag.GE                   => BinaryOp.Long_>=
           case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Long_-
           case Tag.PREINC | Tag.POSTINC => BinaryOp.Long_+
+          case _                        => throw new Exception(
+            s"[compileBinopCode] wrong tag ${jtype.getTag}")
         }
 
         case TypeTag.FLOAT => op match {
@@ -75,6 +81,8 @@ object OpCompiler {
           case Tag.GE                   => BinaryOp.Num_>=
           case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Float_-
           case Tag.PREINC | Tag.POSTINC => BinaryOp.Float_+
+          case _                        => throw new Exception(
+            s"[compileBinopCode] wrong tag ${jtype.getTag}")
         }
 
         case TypeTag.DOUBLE => op match {
@@ -88,9 +96,11 @@ object OpCompiler {
           case Tag.LT                   => BinaryOp.Num_<
           case Tag.LE                   => BinaryOp.Num_<=
           case Tag.GT                   => BinaryOp.Num_>
-          case Tag.GE                                               => BinaryOp.Num_>=
+          case Tag.GE                   => BinaryOp.Num_>=
           case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Double_-
           case Tag.PREINC | Tag.POSTINC => BinaryOp.Double_+
+          case _                        => throw new Exception(
+            s"[compileBinopCode] wrong tag ${jtype.getTag}")
         }
 
         case _ =>
