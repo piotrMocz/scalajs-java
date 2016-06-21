@@ -20,6 +20,12 @@ class Test {
             j--;
         }
 
+        int k = 0;
+        do {
+            System.out.println(k);
+            k++;
+        } while (k < 3);
+
         System.out.println(y++);
         System.out.println(++y);
         System.out.println(2 + 2);

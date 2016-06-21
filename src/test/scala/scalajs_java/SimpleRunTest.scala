@@ -70,19 +70,19 @@ class SimpleRunTest {
     assertRun(42, "int x; System.out.println(x = 42);")
   }
 
-//  @Test def runIncrement(): Unit = {
-//    assertRun(43, "int x = 42; x++; System.out.pritnln(x);")
-//    assertRun(43, "int x = 42; ++x; System.out.pritnln(x);")
-//    assertRun(42, "int x = 42; System.out.pritnln(x++);")
-//    assertRun(43, "int x = 42; System.out.pritnln(++x);")
-//  }
+  @Test def runIncrement(): Unit = {
+    assertRun(43, "int x = 42; x++; System.out.println(x);")
+    assertRun(43, "int x = 42; ++x; System.out.println(x);")
+    assertRun(42, "int x = 42; System.out.println(x++);")
+    assertRun(43, "int x = 42; System.out.println(++x);")
+  }
 
-//  @Test def runDecrement(): Unit = {
-//    assertRun(41, "int x = 42; x--; System.out.pritnln(x);")
-//    assertRun(41, "int x = 42; --x; System.out.pritnln(x);")
-//    assertRun(42, "int x = 42; System.out.pritnln(x--);")
-//    assertRun(41, "int x = 42; System.out.pritnln(--x);")
-//  }
+  @Test def runDecrement(): Unit = {
+    assertRun(41, "int x = 42; x--; System.out.println(x);")
+    assertRun(41, "int x = 42; --x; System.out.println(x);")
+    assertRun(42, "int x = 42; System.out.println(x--);")
+    assertRun(41, "int x = 42; System.out.println(--x);")
+  }
 
   @Test def runForLoop(): Unit = {
     assertRun("42\n42\n42", "for (int i = 0; i < 3; i++) System.out.println(42);")
@@ -94,5 +94,11 @@ class SimpleRunTest {
     assertRun("42\n42\n42", "int i = 0; while (i < 3) { System.out.println(42); i++; }")
     assertRun("0\n1\n2", "int i = 0; while (i < 3) { System.out.println(i); i++; }")
     assertRun("2\n1\n0", "int i = 2; while (i >= 0) { System.out.println(i); i--; }")
+  }
+
+  @Test def runDoWhileLoop(): Unit = {
+    assertRun("42\n42\n42", "int i = 0; do { System.out.println(42); i++; } while (i < 3);")
+    assertRun("0\n1\n2", "int i = 0; do { System.out.println(i); i++; } while (i < 3);")
+    assertRun("3\n2\n1\n0", "int i = 3; do { System.out.println(i); i--; } while (i >= 0);")
   }
 }
