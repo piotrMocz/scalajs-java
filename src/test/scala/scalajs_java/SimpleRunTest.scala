@@ -20,17 +20,19 @@ import scalajs_java.traversals.{JTreeTraverse, OperationsTraverse, ScopedTravers
 /** Blackbox tests */
 class SimpleRunTest {
 
-  private def wrapperMainClass(s: String): String =
+  private def wrapperMainClass(defs: String, s: String): String =
     s"""
       |class Test {
+      |  $defs
+      |
       |  public static void main(String[] args) {
       |    $s
       |  }
       |}
     """.stripMargin
 
-  private def assertRun(expected: Any, code: String): Unit = {
-    val source = wrapperMainClass(code)
+  private def assertRun(expected: Any, code: String, defs: String=""): Unit = {
+    val source = wrapperMainClass(defs, code)
 
     val javaCompiler = new CompilerInterface()
     javaCompiler.compile("Test", source)
@@ -105,12 +107,14 @@ class SimpleRunTest {
   @Test def runArrayAccess(): Unit = {
     assertRun("42", "int[] arr = {41, 42, 43}; System.out.println(arr[1]);")
     assertRun("0", "int[] arr = new int[5]; System.out.println(arr[2]);")
+
     assertRun("0\n1\n2\n3\n4",
       """
       |int[] arr = {0, 1, 2, 3, 4};
       |for (int i = 0; i < 5; i++)
       |  System.out.println(arr[i]);
       """.stripMargin)
+
     assertRun("0\n0\n0\n0\n0",
       """
       |int[] arr = new int[5];
@@ -121,18 +125,63 @@ class SimpleRunTest {
 
   @Test def runTwoDimArrays(): Unit = {
     assertRun("0", "int[][] arr = new int[3][5]; System.out.println(arr[1][1]);")
+
     assertRun("42",
       """
         |int[][] arr = new int[3][5];
         |arr[1][2] = 42;
         |System.out.println(arr[1][2]);
       """.stripMargin)
+
     assertRun("0\n0\n0\n0\n0\n0\n0\n0\n0",
       """
         |int[][] arr = new int[3][3];
         |for (int i = 0; i < 3; ++i)
         |  for (int j = 0; j < 3; ++j)
         |    System.out.println(arr[i][j]);
+      """.stripMargin)
+  }
+
+  @Test def runFieldAccess(): Unit = {
+    assertRun("42",
+    """
+      |Test t = new Test();
+      |System.out.println(t.x);
+    """.stripMargin,
+    """
+      |int x;
+      |
+      |Test() {
+      |  this.x = 42;
+      |}
+    """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test t = new Test(42);
+        |System.out.println(t.x);
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |Test(int par) {
+        |  this.x = par;
+        |}
+      """.stripMargin)
+
+    assertRun("66",
+      """
+        |Test t = new Test(42, 24);
+        |System.out.println(t.x + t.y);
+      """.stripMargin,
+      """
+        |int x;
+        |int y;
+        |
+        |Test(int par1, int par2) {
+        |  this.x = par1;
+        |  this.y = par2;
+        |}
       """.stripMargin)
   }
 }
