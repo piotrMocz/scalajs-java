@@ -47,12 +47,4 @@ class OperationsTraverse extends Traverse {
     Block(forLoop.init :+ loop, isStatic = false)
   }
 
-  override def traverse(doWhileLoop: DoWhileLoop): Statement = {
-    implicit val pos = doWhileLoop.pos
-    val body = traverse(doWhileLoop.body)
-    val whileLoop = WhileLoop(doWhileLoop.cond, body)
-
-    Block(List(body, whileLoop), isStatic = false)
-  }
-
 }

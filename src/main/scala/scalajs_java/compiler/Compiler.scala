@@ -416,11 +416,11 @@ object Compiler {
         val ndims = if (dims.isEmpty) 1 else dims.length
 
         if (initializers.nonEmpty) {
-          Definitions.newArray(initializersC, typeInfo._1, typeInfo._2,
-            ndims)
+          val arrType = irtpe.ArrayType(typeInfo._2, ndims)
+          irt.ArrayValue(arrType, initializersC)
         } else {
           val dimsC = dims.map(compileExpr)
-          Definitions.newArrayOfDim(dimsC, typeInfo._1, typeInfo._2)
+          irt.NewArray(irtpe.ArrayType(typeInfo._2, ndims), dimsC)
         }
 
       case expr: PolyExpr =>
@@ -590,8 +590,11 @@ object Compiler {
 
         irt.While(condC, bodyC)
 
-      case stmt: DoWhileLoop =>
-        ???
+      case DoWhileLoop(cond, body) =>
+        val condC = compileExpr(cond)
+        val bodyC = compileStatement(body)
+
+        irt.DoWhile(bodyC, condC)
     }
   }
 
