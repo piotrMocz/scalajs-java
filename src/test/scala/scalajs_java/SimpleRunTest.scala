@@ -101,4 +101,38 @@ class SimpleRunTest {
     assertRun("0\n1\n2", "int i = 0; do { System.out.println(i); i++; } while (i < 3);")
     assertRun("3\n2\n1\n0", "int i = 3; do { System.out.println(i); i--; } while (i >= 0);")
   }
+
+  @Test def runArrayAccess(): Unit = {
+    assertRun("42", "int[] arr = {41, 42, 43}; System.out.println(arr[1]);")
+    assertRun("0", "int[] arr = new int[5]; System.out.println(arr[2]);")
+    assertRun("0\n1\n2\n3\n4",
+      """
+      |int[] arr = {0, 1, 2, 3, 4};
+      |for (int i = 0; i < 5; i++)
+      |  System.out.println(arr[i]);
+      """.stripMargin)
+    assertRun("0\n0\n0\n0\n0",
+      """
+      |int[] arr = new int[5];
+      |for (int i = 0; i < 5; i++)
+      |  System.out.println(arr[i]);
+      """.stripMargin)
+  }
+
+  @Test def runTwoDimArrays(): Unit = {
+    assertRun("0", "int[][] arr = new int[3][5]; System.out.println(arr[1][1]);")
+    assertRun("42",
+      """
+        |int[][] arr = new int[3][5];
+        |arr[1][2] = 42;
+        |System.out.println(arr[1][2]);
+      """.stripMargin)
+    assertRun("0\n0\n0\n0\n0\n0\n0\n0\n0",
+      """
+        |int[][] arr = new int[3][3];
+        |for (int i = 0; i < 3; ++i)
+        |  for (int j = 0; j < 3; ++j)
+        |    System.out.println(arr[i][j]);
+      """.stripMargin)
+  }
 }

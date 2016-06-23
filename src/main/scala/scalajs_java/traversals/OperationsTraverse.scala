@@ -41,7 +41,7 @@ class OperationsTraverse extends Traverse {
 
     val cond = forLoop.cond.getOrElse(
       BooleanLiteral(true, JExprType(new JCPrimitiveType(TypeTag.BOOLEAN, null))))
-    val body = Block(forLoop.body :: forLoop.update, isStatic = false)
+    val body = Block(traverse(forLoop.body) :: forLoop.update, isStatic = false)
     val loop = WhileLoop(cond, body)
 
     Block(forLoop.init :+ loop, isStatic = false)
@@ -49,7 +49,7 @@ class OperationsTraverse extends Traverse {
 
   override def traverse(doWhileLoop: DoWhileLoop): Statement = {
     implicit val pos = doWhileLoop.pos
-    val body = doWhileLoop.body
+    val body = traverse(doWhileLoop.body)
     val whileLoop = WhileLoop(doWhileLoop.cond, body)
 
     Block(List(body, whileLoop), isStatic = false)

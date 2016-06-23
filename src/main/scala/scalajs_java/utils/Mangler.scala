@@ -11,13 +11,12 @@ package scalajs_java.utils
  * @author  Sébastien Doeraene
  */
 
-import javax.lang.model
+import javax.lang.model.`type`.TypeKind
 
 import scala.collection.mutable.{Map => MMap, Set => MSet}
 import scala.collection.JavaConversions._
 import javax.lang.model.element.Modifier
 
-import com.sun.tools.classfile.Instruction.TypeKind
 import com.sun.tools.javac.code.Symbol.{MethodSymbol, TypeSymbol, VarSymbol}
 import com.sun.tools.javac.code.{Symbol, TypeTag, Type => JType}
 import org.scalajs.core.ir.Definitions
@@ -221,7 +220,7 @@ object Mangler {
 
   //////////////////////////////////////////////////////////////
 
-  private def mangledTypeName(tp: Type): String = tp match {
+  def mangledTypeName(tp: Type): String = tp match {
     case StatementType => ""
     case tp: JExprType => mangleJType(tp.jtype)
   }
@@ -254,12 +253,49 @@ object Mangler {
   }
 
   // TODO this TypedTree class hierarchy is not very good, rethink
-  def mangleType(tree: Tree): String = tree match {
+  def mangleType(typeTree: Tree): String = typeTree match {
     case t: PrimitiveTypeTree => manglePrimitiveType(t.typeTag)
     case t: ArrayTypeTree     => "A" + mangleType(t.elemType)
     case t: TypedTree         => mangledTypeName(t.tp)
     case _                    => throw new Exception("Cannot mangle names without types")
   }
 
+  def arrayTypeTag(tString: String): String = {
+    if (tString.startsWith("bool[]")) "Z"
+    else if (tString.startsWith("byte[]")) "B"
+    else if (tString.startsWith("char[]")) "C"
+    else if (tString.startsWith("double[]")) "D"
+    else if (tString.startsWith("float[]")) "F"
+    else if (tString.startsWith("int[]")) "I"
+    else if (tString.startsWith("long[]")) "J"
+    else if (tString.startsWith("short[]")) "S"
+    else throw new Exception(
+      s"[arrayTypeTag] type is not primitive: $tString")
+  }
+
+  def arrayTypeInfo(tString: String): (String, String) = {
+    val tName =
+      if (tString.startsWith("bool[]")) "Boolean"
+      else if (tString.startsWith("byte[]")) "Byte"
+      else if (tString.startsWith("char[]")) "Char"
+      else if (tString.startsWith("double[]")) "Double"
+      else if (tString.startsWith("float[]")) "Float"
+      else if (tString.startsWith("int[]")) "Int"
+      else if (tString.startsWith("long[]")) "Long"
+      else if (tString.startsWith("short[]")) "Short"
+      else throw new Exception(
+        s"[scalaPrimitiveTypeName] type is not primitive: $tString")
+    val tTag = arrayTypeTag(tString)
+
+    (tName, tTag)
+  }
+
+  def arrayTypeInfo(tpe: Type): (String, String) = tpe match {
+    case JExprType(jtype) if jtype.getKind == TypeKind.ARRAY =>
+      arrayTypeInfo(jtype.toString)
+
+    case _ =>
+      throw new Exception(s"[arrayTypeInfo] not an array type (${tpe.toString}).")
+  }
+
 }
-      

@@ -1,6 +1,8 @@
 package scalajs_java.compiler
 
 
+import javax.lang.model.`type`.TypeKind
+
 import com.sun.tools.javac.code.Symbol.VarSymbol
 import com.sun.tools.javac.tree.JCTree.Tag
 import org.scalajs.core.ir
@@ -351,8 +353,13 @@ object Compiler {
       case expr: FieldAccess =>
         compileFieldAccess(expr)
 
-      case expr: ArrayAccess =>
-        ???
+      case ArrayAccess(arrRef, indexExpr, tp) =>
+        val arrRefC = compileExpr(arrRef)
+        val indexExprC = compileExpr(indexExpr)
+//        val tTag = Mangler.mangledTypeName(tp)
+        val tpC = TypeCompiler.compileType(tp)
+
+        irt.ArraySelect(arrRefC, indexExprC)(tpC)
 
       case expr: InstanceOf =>
         ???
@@ -403,8 +410,18 @@ object Compiler {
       case Parens(expr, _) =>
         compileExpr(expr)  // ???
 
-      case expr: NewArray =>
-        ???
+      case NewArray(_, _, dims, initializers, elemType, tp) =>
+        val initializersC = initializers.map(compileExpr)
+        val typeInfo = Mangler.arrayTypeInfo(tp)
+        val ndims = if (dims.isEmpty) 1 else dims.length
+
+        if (initializers.nonEmpty) {
+          Definitions.newArray(initializersC, typeInfo._1, typeInfo._2,
+            ndims)
+        } else {
+          val dimsC = dims.map(compileExpr)
+          Definitions.newArrayOfDim(dimsC, typeInfo._1, typeInfo._2)
+        }
 
       case expr: PolyExpr =>
         compilePolyExpr(expr)

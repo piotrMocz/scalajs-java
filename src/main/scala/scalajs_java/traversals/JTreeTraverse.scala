@@ -550,7 +550,9 @@ object JTreeTraverse {
     val annotations = newArray.getAnnotations.map(traverseAnnotation).toList
     val dimAnnotations = newArray.getDimAnnotations.map(_.map(traverseAnnotation).toList).toList
     val dimensions = newArray.getDimensions.map(traverseExpr).toList
-    val initializers = newArray.getInitializers.map(traverseExpr).toList
+    val initializers =
+      if (newArray.getInitializers == null) List()
+      else newArray.getInitializers.map(traverseExpr).toList
     val elType = Option(newArray.getType).map(traverseExpr)
     val tp = JExprType(newArray.`type`)
 
