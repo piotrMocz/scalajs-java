@@ -15,7 +15,7 @@ object Predicates {
   }
 
   def isSuperCall(stmt: Statement): Boolean = stmt match {
-    case ExprStatement(MethodInv(Ident(_, name, _, _), _, _, _)) =>
+    case ExprStatement(MethodInv(Ident(_, name, _, _), _, _, _, _)) =>
       name.str == "super"
 
     case _ =>
