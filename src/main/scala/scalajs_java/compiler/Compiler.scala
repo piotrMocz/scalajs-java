@@ -11,7 +11,9 @@ import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 
 import scalajs_java.trees._
 import scalajs_java.utils.Mangler
+import scalajs_java.utils.{ScopeElem, VarInfo, MethodInfo}
 import scalajs_java.Config
+
 
 /** Main compiler.
   */
@@ -43,7 +45,7 @@ object Compiler {
 
     if (Predicates.isSuperCall(stmt)) {
       val superArgs = stmt match {
-        case ExprStatement(MethodInv(_, _, args, _)) =>
+        case ExprStatement(MethodInv(_, _, args, _, _)) =>
           (args.map(compileParamRef),
             args.map(arg => Mangler.mangleType(arg.tp)).mkString("__"))
 
@@ -291,18 +293,17 @@ object Compiler {
     val sym = ident.symbol
     val tpe = TypeCompiler.compileType(ident.tp)
     val name = ident.refVar match {
-      case Some((_, ClassMember)) =>
+      case Some(VarInfo(_, _, ClassMember)) =>
         Mangler.encodeFieldSym(sym)
 
-      case Some((_, LocalVar)) =>
+      case Some(VarInfo(_, _, LocalVar)) =>
         Mangler.encodeLocalSym(sym)
 
-      case Some((_, Param)) =>
+      case Some(VarInfo(_, _, Param)) =>
         Mangler.encodeParamIdent(sym)
 
       case _ =>
-        throw new Exception(
-          "[compileIdent] couldn't determine the referenced var.")
+        irt.Ident(ident.name)
     }
 
     irt.VarRef(name)(tpe)
@@ -459,17 +460,50 @@ object Compiler {
     }
   }
 
+  def compileMethodSelect(methodSel: Expr, args: List[Tree],
+    refDecl: Option[ScopeElem], tp: Type): irt.Tree = {
+    implicit val pos = getPosition(methodSel)
+
+    val methodInfo = refDecl match {
+      case Some(mi@MethodInfo(_, _, _)) =>
+        mi
+
+      case _ =>
+        throw new Exception(
+          s"[compileMethodSelect] failed to determine the referred method: $methodSel")
+    }
+
+    val methodName = Mangler.encodeMethod(methodInfo.decl)
+
+    methodSel match {
+      case fa@FieldAccess(name, sym, selected, _) =>
+        val classType = TypeCompiler.compileType(selected.tp)
+        val tpC = TypeCompiler.compileType(tp)
+        val argsC = args.map(compileTree)
+        val qualifier =
+          if (Predicates.isThisSelect(fa)) {
+            irt.This()(classType)
+          } else {
+            val ident = compileSelectIdent(selected)
+            irt.VarRef(ident)(classType)
+          }
+
+        irt.Apply(qualifier, methodName, argsC)(tpC)
+
+      case _ =>
+        throw new Exception(
+          "[compileMethodSelect] expected a FieldAccess in method call.")
+    }
+  }
+
   def compileMethodInv(methodInv: MethodInv): irt.Tree = {
     implicit val pos = getPosition(methodInv)
     if (Predicates.isPrintMethodInv(methodInv)) {
       val body = compileTree(methodInv.args.head)
       Definitions.printMethod(body)
     } else {
-      val args = methodInv.args.map(compileExpr)
-      val sel = compileExpr(methodInv.methodSel)
-      val typeArgs = methodInv.typeArgs.map(TypeCompiler.compileType)
-
-      null
+      compileMethodSelect(methodInv.methodSel, methodInv.args,
+        methodInv.refDecl, methodInv.tp)
     }
   }
 
@@ -555,7 +589,6 @@ object Compiler {
 
       case Block(statements, _) =>
         val statementsC = statements.map(compileStatement)
-
         irt.Block(statementsC)
 
       case stmt: TryStmt =>

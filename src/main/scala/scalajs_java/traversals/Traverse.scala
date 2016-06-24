@@ -164,8 +164,8 @@ trait Traverse {
     ClassDecl(classDecl.name, classDecl.symbol,
       classDecl.typeParams.map(traverse),
       classDecl.extendsCl.map(traverse),
-      classDecl.implementsCl.map(traverse), classDecl.members.map(traverse))(
-      classDecl.pos)
+      classDecl.implementsCl.map(traverse),
+      classDecl.members.map(traverse))(classDecl.pos)
   }
 
   def traverse(varDecl: VarDecl): VarDecl = {

@@ -9,6 +9,8 @@ import javax.lang.model.`type`.TypeKind
 import com.sun.tools.javac.code.Symbol.{ClassSymbol, MethodSymbol, VarSymbol}
 import com.sun.tools.javac.tree.JCTree.Tag
 
+import scalajs_java.utils.ScopeElem
+
 
 // Tree
 
@@ -97,7 +99,7 @@ case class ClassLiteral(value: Any, tp: Type)(
     implicit val pos: Position) extends Literal
 
 case class Ident(symbol: Symbol, name: Name, tp: Type,
-    refVar: Option[(Tree, VarKind)]=None)(
+    refVar: Option[ScopeElem]=None)(
     implicit val pos: Position) extends Expr
 
 case class FieldAccess(name: Name, symbol: Symbol, selected: Expr, tp: Type)(
@@ -138,7 +140,8 @@ case class NewArray(annotations: List[Annotation],
 sealed trait PolyExpr extends Expr
 
 case class MethodInv(methodSel: Expr, typeArgs: List[Expr], args: List[Expr],
-    tp: Type)(implicit val pos: Position) extends PolyExpr
+    tp: Type, refDecl: Option[ScopeElem]=None)(
+    implicit val pos: Position) extends PolyExpr
 
 case class Conditional(cond: Expr, trueExpr: Expr, falseExpr: Expr, tp: Type)(
     implicit val pos: Position) extends PolyExpr
@@ -238,6 +241,9 @@ case object Name {
 }
 
 case class Position(line: Int)
+case object Position {
+  def noPosition = Position(0)
+}
 
 sealed trait PolyKind
 case object Standalone extends PolyKind
@@ -257,3 +263,4 @@ sealed trait VarKind
 case object ClassMember extends VarKind
 case object Param extends VarKind
 case object LocalVar extends VarKind
+case object Method extends VarKind

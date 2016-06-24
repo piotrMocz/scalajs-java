@@ -184,4 +184,70 @@ class SimpleRunTest {
         |}
       """.stripMargin)
   }
+
+  @Test def runMethodCall(): Unit = {
+    assertRun("42",
+      """
+        |Test t = new Test();
+        |t.foo();
+      """.stripMargin,
+      """
+        |void foo() { System.out.println(42); }
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test t = new Test();
+        |System.out.println(t.foo());
+      """.stripMargin,
+      """
+        |int foo() { return 42; }
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test t = new Test(42);
+        |System.out.println(t.foo());
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |Test(int par) {
+        |  this.x = par;
+        |}
+        |
+        |int foo() { return this.x; }
+      """.stripMargin)
+
+    assertRun("66",
+      """
+        |Test t = new Test(42);
+        |System.out.println(t.foo(24));
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |Test(int par) {
+        |  this.x = par;
+        |}
+        |
+        |int foo(int mpar) { return this.x + mpar; }
+      """.stripMargin)
+
+    assertRun("76",
+      """
+        |Test t = new Test(42);
+        |System.out.println(t.foo(24, 10));
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |Test(int par) {
+        |  this.x = par;
+        |}
+        |
+        |int foo(int mpar1, int mpar2) { return this.x + mpar1 + mpar2; }
+      """.stripMargin)
+
+  }
 }
