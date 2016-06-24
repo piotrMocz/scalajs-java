@@ -38,21 +38,21 @@ object Compiler {
     * compile them separately.
     */
   def compileConstructorStmt(className: irt.Ident, classType: irtpe.ClassType,
-      constrName: irt.Ident, superClassType: irtpe.ClassType,
-      stmt: Statement): irt.Tree = {
+      superClassType: irtpe.ClassType, stmt: Statement): irt.Tree = {
     implicit val pos = getPosition(stmt)
 
     if (Predicates.isSuperCall(stmt)) {
       val superArgs = stmt match {
         case ExprStatement(MethodInv(_, _, args, _)) =>
-          args.map(compileParamRef)
+          (args.map(compileParamRef),
+            args.map(arg => Mangler.mangleType(arg.tp)).mkString("__"))
 
         case _ =>
           throw new Exception("[compileConstructorStmt] unexpected tree.")
       }
-      // TODO constrName is actually a constructor of the super class
+      val constrName = irt.Ident("init___" + superArgs._2)
       irt.ApplyStatically(irt.This()(classType), superClassType, constrName,
-        superArgs)(irtpe.NoType)
+        superArgs._1)(irtpe.NoType)
     } else {
       compileStatement(stmt)
     }
@@ -68,11 +68,9 @@ object Compiler {
     implicit val pos = getPosition(methodDecl)
 
     val constrName = Mangler.encodeMethod(methodDecl)
-    val constrArgs = methodDecl.params.map(compileParam)
-    val tp = irtpe.NoType
     // helper func to capture the names:
     val compConsStmt = (stmt: Statement) =>
-      compileConstructorStmt(className, classType, constrName, superClassType, stmt)
+      compileConstructorStmt(className, classType, superClassType, stmt)
     val body = irt.Block(methodDecl.body.statements.map(compConsStmt))
 
     val retType = methodDecl.retType.map(TypeCompiler.compileType).getOrElse(irtpe.NoType)
@@ -275,13 +273,14 @@ object Compiler {
   def compileFieldAccess(fieldAcc: FieldAccess): irt.Select = {
     implicit val pos = getPosition(fieldAcc)
     val item = Mangler.encodeFieldSym(fieldAcc.symbol)
+    val classType = TypeCompiler.compileType(fieldAcc.selected.tp)
     val tpe = TypeCompiler.compileType(fieldAcc.tp)
     val qualifier =
     if (Predicates.isThisSelect(fieldAcc)) {
-        irt.This()(irtpe.NoType)
+        irt.This()(classType)
       } else {
         val ident = compileSelectIdent(fieldAcc.selected)
-        irt.VarRef(ident)(tpe)
+        irt.VarRef(ident)(classType)
       }
 
     irt.Select(qualifier, item)(tpe)
@@ -442,8 +441,13 @@ object Compiler {
 
         irt.If(condC, thenpC, elsepC)(tpeC)
 
-      case polyExpr: NewClass =>
-        ???
+      case NewClass(ident, tArgs, args, clsBody, enclExpr, tp) =>
+        val clsC = TypeCompiler.compileClassType(ident)
+        val mangledArgs = args.map(arg => Mangler.mangleType(arg.tp)).mkString("__")
+        val ctorC = irt.Ident("init___" + mangledArgs, Some("<init>__" + mangledArgs))
+        val argsC = args.map(compileExpr)
+
+        irt.New(clsC, ctorC, argsC)
 
       case polyExpr: FuncExpr => polyExpr match {
         case funcExpr: MemberRef =>

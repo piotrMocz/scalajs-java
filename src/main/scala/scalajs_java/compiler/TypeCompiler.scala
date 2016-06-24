@@ -34,7 +34,8 @@ object TypeCompiler {
       "[compilePrimitiveType] Not a primitive type")
   }
 
-  def compileObjectType(tpe: JType): irtpe.Type = ???  // TODO
+  def compileClassType(tpe: JType): irtpe.Type =
+    Mangler.encodeClassType(tpe.tsym)
 
   def compileArrayType(tpe: JType): irtpe.Type = {
     val tTag = Mangler.arrayTypeTag(tpe.toString)
@@ -45,7 +46,7 @@ object TypeCompiler {
   def compileJavaType(tpe: JExprType): irtpe.Type = {
     if (tpe.jtype.isPrimitive) compilePrimitiveType(tpe.jtype.getTag)
     else if (isArrayType(tpe)) compileArrayType(tpe.jtype)
-    else compileObjectType(tpe.jtype)
+    else compileClassType(tpe.jtype)
   }
 
   /** Compile a type encoded as an AST attribute */
@@ -73,6 +74,15 @@ object TypeCompiler {
     case tree                   => tree
   }
 
+  def compileClassType(typeTree: Tree): irtpe.ClassType = typeTree match {
+    case id: Ident =>
+      Mangler.encodeClassType(id.symbol)
+
+    case _ =>
+      throw new Exception(
+        s"[compileClassType] Not a class type tree: ${typeTree.toString}")
+  }
+
   /** Compile a type encoded as an AST node */
   def compileType(tpe: Tree): irtpe.Type = tpe match {
     case PrimitiveTypeTree(_, tTag, _) =>
@@ -83,9 +93,9 @@ object TypeCompiler {
       val tname = Mangler.mangleType(getArrayElemType(elemType))
       irtpe.ArrayType(tname, dims)
 
-    case Ident(sym, _, _, _) =>
+    case ident@Ident(sym, _, _, _) =>
       if (sym.toString == "java.lang.String") irtpe.StringType
-      else throw new Exception("[compileType] Cannot yet compile this type.") // TODO compile object types
+      else compileClassType(ident)  // TODO there're more cases, I guess
 
     case _ =>
       ???

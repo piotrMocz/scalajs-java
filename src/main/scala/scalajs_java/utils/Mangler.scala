@@ -204,7 +204,7 @@ object Mangler {
   /** Computes the internal name for a type. */
   private def internalName(tpe: Tree): String = mangleType(tpe)
 
-  private def internalName(tpe: Type): String = mangledTypeName(tpe)
+  private def internalName(tpe: Type): String = mangleType(tpe)
 
   private def internalName(jtpe: JType): String = mangleJType(jtpe)
 
@@ -219,15 +219,6 @@ object Mangler {
     else name
 
   //////////////////////////////////////////////////////////////
-
-  def mangledTypeName(tp: Type): String = tp match {
-    case StatementType => ""
-    case tp: JExprType => mangleJType(tp.jtype)
-  }
-
-  private def mangleJType(jtype: JType): String =
-    if (jtype.isPrimitive) manglePrimitiveType(jtype.getTag)
-    else mangleObjectType(jtype)
 
   private def manglePrimitiveType(ttag: TypeTag): String = ttag match {
     case TypeTag.BOOLEAN => "Z"
@@ -252,11 +243,20 @@ object Mangler {
       s"[mangleObjectType] Cannot yet handle type: ${jtype.tsym.toString}")
   }
 
+  private def mangleJType(jtype: JType): String =
+    if (jtype.isPrimitive) manglePrimitiveType(jtype.getTag)
+    else mangleObjectType(jtype)
+
+  def mangleType(tp: Type): String = tp match {
+    case StatementType => ""
+    case tp: JExprType => mangleJType(tp.jtype)
+  }
+
   // TODO this TypedTree class hierarchy is not very good, rethink
   def mangleType(typeTree: Tree): String = typeTree match {
     case t: PrimitiveTypeTree => manglePrimitiveType(t.typeTag)
     case t: ArrayTypeTree     => "A" + mangleType(t.elemType)
-    case t: TypedTree         => mangledTypeName(t.tp)
+    case t: TypedTree         => mangleType(t.tp)
     case _                    => throw new Exception("Cannot mangle names without types")
   }
 
