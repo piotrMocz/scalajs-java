@@ -1,7 +1,7 @@
 # scalajs-java
 Project aims to compile Java sources into Scala.js IR
 
-[![Build Status](http://141.5.102.128:8080/job/scalajs_java/badge/icon)](http://141.5.102.128:8080/job/scalajs_java/)
+[![Build Status](https://travis-ci.org/piotrMocz/scalajs-java.svg?branch=master)](https://travis-ci.org/piotrMocz/scalajs-java)
 
 ### Setup and running
 To compile Java programs and transform the trees you only need scala and sbt. To run the programs you also need Node.js. Apart from that, all you need to do is run (in project root):
@@ -27,3 +27,6 @@ Right now we can compile:
 * assign-ops (e.g. `x += 10`)
 * incrementation, decrementation (both pre- and post-)
 * `println` method invocation (useful for debugging and testing)
+* object creation with `new`
+* field access
+* method invocation in general (although `println` is the only supported library method right now)

@@ -1,19 +1,31 @@
 package scalajs_java.utils
 
 import scala.collection.mutable.{Map => MMap}
-import scalajs_java.trees.{Tree, VarDecl, VarKind}
+import scalajs_java.trees._
+
+sealed trait ScopeElem {
+  val name: String
+  val decl: Tree
+  val kind: VarKind
+}
+case class VarInfo(name: String, decl: VarDecl, kind: VarKind) extends ScopeElem
+case class MethodInfo(name: String, decl: MethodDecl, kind: VarKind=Method) extends ScopeElem
+case class LibraryMethod(name: String) extends ScopeElem {
+  override val decl: Tree = Skip()(Position.noPosition)
+  override val kind: VarKind = Method
+}
 
 trait Scope {
 
-  type ScopeT = MMap[String, List[(Tree, VarKind)]]
-  type VarInfo = (String, VarDecl, VarKind)
+  type ScopeT = MMap[String, List[ScopeElem]]
 
   val scope: ScopeT = MMap.empty
 
-  def addToScope(symbol: String, tree: Tree, varKind: VarKind): Unit = {
-    if (!scope.contains(symbol)) scope(symbol) = Nil
+  def addToScope(scopeElem: ScopeElem): Unit = {
+    val sym = scopeElem.name
+    if (!scope.contains(sym)) scope(sym) = Nil
 
-    scope(symbol) = (tree, varKind) :: scope(symbol)
+    scope(sym) = scopeElem :: scope(sym)
   }
 
   def remFromScope(symbol: String): Unit = {
@@ -27,27 +39,41 @@ trait Scope {
       scope.remove(symbol)
   }
 
-  def getFromScope(symbol: String): Option[(Tree, VarKind)] = {
+  def getFromScope(symbol: String): Option[ScopeElem] = {
     scope.get(symbol).flatMap {
       case head :: _ => Some(head)
-      case _ => None
+      case _         => Scope.libraryMethods.get(symbol)
     }
   }
 
-  def getVarInfos(members: List[Tree]): List[VarInfo] =
-    members.collect { case vd: VarDecl => (vd.name.str, vd, vd.kind) }
+  def getScopeElems(members: List[Tree]): List[ScopeElem] = {
+    members.collect {
+      case vd: VarDecl => VarInfo(vd.name.str, vd, vd.kind)
+      case md: MethodDecl => MethodInfo(md.name.str, md, Method)
+    }
+  }
 
   /** The key method of this module, used to perform
     * computations with a temporary scope update */
-  def withScope[T, S](scopeElems: List[Tree], tree: T)(f: T => S): S = {
-    val varInfos = getVarInfos(scopeElems)
-    varInfos.foreach(vi => addToScope(vi._1, vi._2, vi._3))
+  def withScope[T, S](scope: List[Tree], tree: T)(f: T => S): S = {
+    val scopeElems = getScopeElems(scope)
+    scopeElems.foreach(addToScope)
 
     val res = f(tree)
-    varInfos.foreach(vi => remFromScope(vi._1))
+
+    scopeElems.foreach(vi => remFromScope(vi.name))
     res
   }
 
   def withScope[T, S](scopeElem: Tree, tree: T)(f: T => S): S =
     withScope[T, S](List(scopeElem), tree)(f)
+}
+
+object Scope {
+  /* TODO make only `System.out.println` a library method,
+   * not every `println` */
+  val libraryMethods = Map[String, ScopeElem](
+    "println" -> LibraryMethod("println"),
+    "print" -> LibraryMethod("print")
+  )
 }

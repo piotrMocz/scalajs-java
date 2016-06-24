@@ -34,4 +34,20 @@ class ScopedTraverse extends Traverse with Scope { self =>
 
     ident.copy(refVar = referredTree)(ident.pos)
   }
+
+  override def traverse(methodInv: MethodInv): MethodInv = {
+    implicit val pos = methodInv.pos
+
+    val refTree = methodInv.methodSel match {
+      case FieldAccess(name, _, _, _) => getFromScope(name)
+      case _                          => None
+    }
+
+    MethodInv(
+      traverse(methodInv.methodSel),
+      methodInv.typeArgs.map(traverse),
+      methodInv.args.map(traverse),
+      methodInv.tp,
+      refTree)
+  }
 }

@@ -44,7 +44,7 @@ object TypeCompiler {
   }
 
   def compileJavaType(tpe: JExprType): irtpe.Type = {
-    if (tpe.jtype.isPrimitive) compilePrimitiveType(tpe.jtype.getTag)
+    if (tpe.jtype.isPrimitiveOrVoid) compilePrimitiveType(tpe.jtype.getTag)
     else if (isArrayType(tpe)) compileArrayType(tpe.jtype)
     else compileClassType(tpe.jtype)
   }
