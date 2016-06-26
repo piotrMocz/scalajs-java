@@ -1,15 +1,11 @@
 package scalajs_java
 
 import org.scalajs.core.ir
-import org.scalajs.core.ir.Trees.ClassDef
 import ir.Printers._
 import org.scalajs.core.tools.logging._
-import org.scalajs.core.tools.io._
-import org.scalajs.core.tools.jsdep.ResolvedJSDependency
 import org.scalajs.jsenv._
 
-import scalajs_java.compiler.Compiler
-import scalajs_java.traversals.{JTreeTraverse, OperationsTraverse, ScopedTraverse, Traverse}
+import scalajs_java.compiler.passes._
 import scalajs_java.trees._
 
 object Main {
@@ -19,42 +15,36 @@ object Main {
     javaCompiler.compile(Config.testFilePath)
 
     println("------------------------- Scala AST ----------------------")
-    val tree = JTreeTraverse.traverse(javaCompiler.compilationUnit)
+    val tree = (new JTraversePass).run(javaCompiler.compilationUnit)
     println(tree.toString)
     println("\n\n")
 
-    println("---------------------------- AST -------------------------")
-    val treeVisitor = new JTreeVisitor(true)
-    javaCompiler.compilationUnit.getTree.accept(treeVisitor)
+    println("------------------------- Traversals ----------------------")
+
+    println("[Operation transforming]")
+    val opTree = (new OpTraversePass).run(tree)
+    println(opTree)
     println("\n\n")
 
-    println("------------------------- Traversals ----------------------")
-    val opTransformer = new OperationsTraverse
-    val opTree = opTransformer.traverse(tree)
-    println("After operator transformation:")
-    println(opTree)
 
-    val refTagger = new ScopedTraverse
-    val taggedTree = refTagger.traverse(opTree)
-    println("After reference tagging:")
+    val taggedTree = (new RefTagPass).run(opTree)
+    println("[reference tagging]")
     println(taggedTree)
+    println("\n\n")
 
-    println("---------------------------- ENV -------------------------")
-    javaCompiler.printEnvs()
-
-    println()
     println("---------------------------- IR  -------------------------")
-    val ir = compiler.Compiler.compile(taggedTree)
-    println(ir.toString)
+    val ir = (new CompilerPass).run(taggedTree)
+    println(ir)
+    println("\n\n")
 
-    println()
+
     println("------------------------ Running -------------------------")
     compileAndRun(taggedTree)
 
   }
 
   private def compileAndRun(compilationUnit: CompilationUnit): Unit = {
-    val compRes = Compiler.compile(compilationUnit)
+    val compRes = (new CompilerPass).run(compilationUnit)
     val defs = compRes._1
     val mainObjectName = compRes._2
 

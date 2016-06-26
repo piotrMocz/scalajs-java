@@ -7,9 +7,10 @@ import com.sun.tools.javac.tree.JCTree
 
 import scala.collection.JavaConversions._
 import scalajs_java.trees._
+import scalajs_java.utils.ErrorHanlder
 
 /** Converts the JCTree into Scala representation (from `Tree.scala`). */
-object JTreeTraverse {
+class JTreeTraverse(val errorHanlder: ErrorHanlder) {
 
   /** Traverse a java compilation unit, creating a `Trees.CompilationUnit` */
   def traverse(compilationUnit: JCTree.JCCompilationUnit): CompilationUnit = {

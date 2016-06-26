@@ -37,6 +37,9 @@ public class CompilerInterface {
         this.compiler.verbose = true;
         this.compiler.genEndPos = true;
         this.compiler.keepComments = true;
+        this.compiler.log.dumpOnError = true;
+        this.compiler.log.emitWarnings = true;
+        this.compiler.verboseCompilePolicy = true;
 
         try(PrintWriter pw = new PrintWriter("loggg.txt")) {
             this.compiler.log.setWriter(WriterKind.ERROR, pw);
@@ -57,6 +60,9 @@ public class CompilerInterface {
         // this performs the typechecking:
         this.attrs = compiler.attribute(compiler.todo);
         this.compilationUnit = compilationUnits.head;
+
+//        System.out.println("Log.nerrors: " + this.compiler.log.nerrors);
+//        this.compiler.log.flush();
     }
 
     /** Compile source string */

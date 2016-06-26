@@ -15,6 +15,7 @@ import org.scalajs.core.ir.{Trees => irt, Types => irtpe}
 
 import scalajs_java.compiler._
 import scalajs_java.trees._
+import scalajs_java.utils.{CompilerPhase, ErrorHanlder}
 
 /** Whitebox tests */
 class CompilerTest {
@@ -22,7 +23,10 @@ class CompilerTest {
   private implicit val DummyPos = ir.Position(ir.Position.SourceFile(Config.testFilePath), 0, 0)
   private implicit val DummyPos2 = Position(0)
 
-  private val MainObjectFullName = Compiler.MainObjectFullName
+  private val errorHanlder = new ErrorHanlder(CompilerPhase("Test compile"))
+  private val compiler = new Compiler(errorHanlder)
+
+  private val MainObjectFullName = compiler.MainObjectFullName
   private val MainClassFullName = MainObjectFullName + "$"
 
   // Could be useful in tests, depending on the trees you generate
@@ -39,7 +43,7 @@ class CompilerTest {
     }
 
     val expectedHash = hashOf(expected)
-    val actual = Compiler.compileTree(sourceTree)
+    val actual = compiler.compileTree(sourceTree)
     val actualHash = hashOf(actual)
 
     assertTrue(s"Expected $expected but got $actual",

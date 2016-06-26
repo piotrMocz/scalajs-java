@@ -17,6 +17,8 @@ case class LibraryMethod(name: String) extends ScopeElem {
 
 trait Scope {
 
+  val errorHanlder: ErrorHanlder
+
   type ScopeT = MMap[String, List[ScopeElem]]
 
   val scope: ScopeT = MMap.empty
@@ -29,14 +31,16 @@ trait Scope {
   }
 
   def remFromScope(symbol: String): Unit = {
-    if (!scope.contains(symbol))
-      throw new Exception("[remFromScope] Symbol not in scope.")
+    if (!scope.contains(symbol)) {
+      errorHanlder.fail(0, Some("remFromScope"),
+        s"Not in scope: $symbol", Normal)
+    } else {
+      if (scope(symbol).nonEmpty)
+        scope(symbol) = scope(symbol).tail
 
-    if (scope(symbol).nonEmpty)
-      scope(symbol) = scope(symbol).tail
-
-    if (scope(symbol).isEmpty)
-      scope.remove(symbol)
+      if (scope(symbol).isEmpty)
+        scope.remove(symbol)
+    }
   }
 
   def getFromScope(symbol: String): Option[ScopeElem] = {

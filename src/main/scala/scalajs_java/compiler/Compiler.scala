@@ -7,17 +7,17 @@ import com.sun.tools.javac.code.Symbol.VarSymbol
 import com.sun.tools.javac.tree.JCTree.Tag
 import org.scalajs.core.ir
 import org.scalajs.core.ir.Definitions._
+import org.scalajs.core.ir.Trees.{ClassDef, OptimizerHints}
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 
 import scalajs_java.trees._
-import scalajs_java.utils.Mangler
-import scalajs_java.utils.{ScopeElem, VarInfo, MethodInfo}
+import scalajs_java.utils._
 import scalajs_java.Config
 
 
 /** Main compiler.
   */
-object Compiler {
+class Compiler(val errorHanlder: ErrorHanlder) {
   var MainObjectFullName = ""
 
   private final def objectClassIdent(implicit pos: Position) =
@@ -44,17 +44,19 @@ object Compiler {
     implicit val pos = getPosition(stmt)
 
     if (Predicates.isSuperCall(stmt)) {
-      val superArgs = stmt match {
+      stmt match {
         case ExprStatement(MethodInv(_, _, args, _, _)) =>
-          (args.map(compileParamRef),
-            args.map(arg => Mangler.mangleType(arg.tp)).mkString("__"))
+          val argRefsC = args.map(compileParamRef)
+          val argStr = args.map(arg => Mangler.mangleType(arg.tp)).mkString("__")
+          val constrName = irt.Ident("init___" + argStr)
+          irt.ApplyStatically(irt.This()(classType), superClassType, constrName,
+            argRefsC)(irtpe.NoType)
 
         case _ =>
-          throw new Exception("[compileConstructorStmt] unexpected tree.")
+          errorHanlder.fail(pos.line, Some("compileConstructorStmt"),
+          "encountered unexpected tree", Normal)
+          irt.EmptyTree
       }
-      val constrName = irt.Ident("init___" + superArgs._2)
-      irt.ApplyStatically(irt.This()(classType), superClassType, constrName,
-        superArgs._1)(irtpe.NoType)
     } else {
       compileStatement(stmt)
     }
@@ -97,7 +99,7 @@ object Compiler {
     irt.ParamDef(name, ptpe, mutable = false, rest = false)
   }
 
-  def compileParamRef(paramRef: Expr): irt.VarRef = {
+  def compileParamRef(paramRef: Expr): irt.Tree = {
     implicit val pos = getPosition(paramRef)
     paramRef match {
       case Ident(sym, name, tp, _) =>
@@ -107,8 +109,9 @@ object Compiler {
         irt.VarRef(ident)(tpe)
 
       case _ =>
-        throw new Exception(
-          "[compileParamRef] Parameter references have to be idents")
+        errorHanlder.fail(pos.line, Some("compileParam"),
+          "Parameter reference of unknown form", Normal)
+        irt.EmptyTree
     }
   }
 
@@ -139,7 +142,7 @@ object Compiler {
     val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
       irtpe.zeroOf(tpe))
 
-    // TODO what happens with the initializer?
+    // TODO what is the name expression?
 
     irt.FieldDef(name, tpe, mutable = false)
   }
@@ -153,8 +156,9 @@ object Compiler {
       (name, tpe)
 
     case Some(_) =>
-      throw new Exception(
-        "[compileExtendsClause] expected Ident as the extends clause.")
+      errorHanlder.fail(pos.line, Some("compileExtendsClause"),
+        "extends clause of unknown form (expected: Identifier)", Normal)
+      (irt.Ident(""), irtpe.ClassType(""))
 
     case None =>
       (objectClassIdent, objectClassType)
@@ -261,15 +265,18 @@ object Compiler {
     irt.VarDef(name, tpe, mutable = true, init)
   }
 
-  def compileSelectIdent(expr: Expr): irt.Ident = expr match {
-    case Ident(sym, _, _, _) =>
-      implicit val pos = getPosition(expr)
-      if (sym.isLocal) Mangler.encodeLocalSym(sym)
-      else Mangler.encodeFieldSym(sym.asInstanceOf[VarSymbol]) // TODO
+  def compileSelectIdent(expr: Expr): irt.Ident = {
+    implicit val pos = getPosition(expr)
+    expr match {
+      case Ident(sym, _, _, _) =>
+        if (sym.isLocal) Mangler.encodeLocalSym(sym)
+        else Mangler.encodeFieldSym(sym.asInstanceOf[VarSymbol]) // TODO
 
-    case _ =>
-      throw new Exception(
-        "[compileSelectIdent] Expression has to be an ident.")
+      case _ =>
+        errorHanlder.fail(pos.line, Some("compileSelectIdent"),
+          "field access of unknown form (expected: Identifier)", Normal)
+        irt.Ident("")
+    }
   }
 
   def compileFieldAccess(fieldAcc: FieldAccess): irt.Select = {
@@ -393,8 +400,9 @@ object Compiler {
             irt.Block(tmpVarDef, assignC, tmpVarRef)
 
           case _ =>
-            throw new Exception(
-              s"[compileExpr -- Unary] Not a known unary tag: $op.")
+            errorHanlder.fail(pos.line, Some("compileExpr: Unary"),
+              s"Not a know unary operation: $op", Normal)
+            irt.EmptyTree
         }
 
       case expr: AssignOp =>
@@ -464,35 +472,37 @@ object Compiler {
     refDecl: Option[ScopeElem], tp: Type): irt.Tree = {
     implicit val pos = getPosition(methodSel)
 
-    val methodInfo = refDecl match {
-      case Some(mi@MethodInfo(_, _, _)) =>
-        mi
+    refDecl match {
+      case Some(methodInfo@MethodInfo(_, _, _)) =>
+        val methodName = Mangler.encodeMethod(methodInfo.decl)
+
+        methodSel match {
+          case fa@FieldAccess(name, sym, selected, _) =>
+            val classType = TypeCompiler.compileType(selected.tp)
+            val tpC = TypeCompiler.compileType(tp)
+            val argsC = args.map(compileTree)
+            val qualifier =
+              if (Predicates.isThisSelect(fa)) {
+                irt.This()(classType)
+              } else {
+                val ident = compileSelectIdent(selected)
+                irt.VarRef(ident)(classType)
+              }
+
+            irt.Apply(qualifier, methodName, argsC)(tpC)
+
+          case _ =>
+            errorHanlder.fail(pos.line, Some("compileMethodSelect"),
+              "method call of unknown form (expected: Field Access)", Normal)
+            irt.EmptyTree
+        }
 
       case _ =>
-        throw new Exception(
-          s"[compileMethodSelect] failed to determine the referred method: $methodSel")
-    }
+        errorHanlder.fail(pos.line, Some("compileMethodSelect"),
+          "failed to determine which method does the identifier refer to.",
+          Normal)
+        irt.EmptyTree
 
-    val methodName = Mangler.encodeMethod(methodInfo.decl)
-
-    methodSel match {
-      case fa@FieldAccess(name, sym, selected, _) =>
-        val classType = TypeCompiler.compileType(selected.tp)
-        val tpC = TypeCompiler.compileType(tp)
-        val argsC = args.map(compileTree)
-        val qualifier =
-          if (Predicates.isThisSelect(fa)) {
-            irt.This()(classType)
-          } else {
-            val ident = compileSelectIdent(selected)
-            irt.VarRef(ident)(classType)
-          }
-
-        irt.Apply(qualifier, methodName, argsC)(tpC)
-
-      case _ =>
-        throw new Exception(
-          "[compileMethodSelect] expected a FieldAccess in method call.")
     }
   }
 
@@ -662,12 +672,14 @@ object Compiler {
         compileStatement(tree)
 
       case tree: CompilationUnit =>
-        throw new Exception(
-          "Cannot have nested compilation units")
+        errorHanlder.fail(pos.line, Some("compileTree"),
+          "Cannot have nested compilation units", Fatal)
+        irt.EmptyTree
 
       case _ =>
-        throw new Exception(
-          s"Cannot yet compile a tree of class ${tree.getClass}")
+        errorHanlder.fail(pos.line, Some("compileTree"),
+          s"Found unknown tree: $tree", Fatal)
+        irt.EmptyTree
     }
   }
 
@@ -679,8 +691,11 @@ object Compiler {
     val imports = compilationUnit.imports.map(compileImport) // TODO
     val decls = compilationUnit.typeDecls.map({
       case c: ClassDecl => compileClassDecl(c)
-      case _            => throw new Exception(
-          "[compile] only classes allowed as top-level declarations")
+      case _            =>
+        errorHanlder.fail(pos.line, Some("compile"), "only class declarations" +
+            "allowed at top-level", Fatal)
+        irt.ClassDef(irt.Ident(""), ir.ClassKind.Class, None, Nil, None, Nil)(
+          OptimizerHints.empty)
     })
 
     (decls ++ companionObjects, MainObjectFullName)

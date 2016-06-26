@@ -231,6 +231,8 @@ case class DoWhileLoop(cond: Expr, body: Statement)(
 
 // Other
 
+case class ErrorTree(pos: Position) extends Tree with Expr with Statement
+
 case class Name(str: String)
 
 case object Name {
