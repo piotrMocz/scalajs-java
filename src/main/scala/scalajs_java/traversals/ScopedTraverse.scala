@@ -1,11 +1,11 @@
 package scalajs_java.traversals
 
 import scalajs_java.trees._
-import scalajs_java.utils.Scope
+import scalajs_java.utils.{ErrorHanlder, Scope}
 
 /** Traverses the tree constructing the scope and tagging
   * `Ident` nodes with the tree nodes they reference. */
-class ScopedTraverse extends Traverse with Scope { self =>
+class ScopedTraverse(errHanlder: ErrorHanlder) extends Traverse with Scope { self =>
 
   override def traverse(classDecl: ClassDecl): ClassDecl = {
     withScope[ClassDecl, ClassDecl](classDecl.members, classDecl)(super.traverse)
@@ -50,4 +50,6 @@ class ScopedTraverse extends Traverse with Scope { self =>
       methodInv.tp,
       refTree)
   }
+
+  override val errorHanlder: ErrorHanlder = errHanlder
 }

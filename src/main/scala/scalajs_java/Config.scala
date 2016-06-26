@@ -6,5 +6,5 @@ package scalajs_java
   */
 object Config {
   val testFilePath: String = "Test.java"
-
+  val verbose: Boolean = true
 }

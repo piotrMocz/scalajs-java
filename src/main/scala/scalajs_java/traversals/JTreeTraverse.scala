@@ -4,12 +4,14 @@ import com.sun.source.tree.LambdaExpressionTree.BodyKind
 import com.sun.source.tree.MemberReferenceTree
 import com.sun.tools.javac.code.TypeTag
 import com.sun.tools.javac.tree.JCTree
+import org.scalajs.core.ir.Trees
 
 import scala.collection.JavaConversions._
 import scalajs_java.trees._
+import scalajs_java.utils.{ErrorHanlder, Fatal, Normal}
 
 /** Converts the JCTree into Scala representation (from `Tree.scala`). */
-object JTreeTraverse {
+class JTreeTraverse(val errorHanlder: ErrorHanlder) {
 
   /** Traverse a java compilation unit, creating a `Trees.CompilationUnit` */
   def traverse(compilationUnit: JCTree.JCCompilationUnit): CompilationUnit = {
@@ -43,11 +45,14 @@ object JTreeTraverse {
         traverseModifiers(that)
 
       case that: JCTree.JCCompilationUnit =>
-        throw new Exception("[traverseTree] Cannot have nested compilation units")
+        errorHanlder.fail(pos.line, Some("traverseTree"),
+          "Cannot have nested compilation units", Fatal)
+        ErrorTree(pos)
 
       case that =>
-        println("Node not handled yet: " + that.getTag.toString)
-        Skip()
+        errorHanlder.fail(pos.line, Some("traverseTree"),
+          s"Node not handled yet: ${that.getTag.toString}", Normal)
+        ErrorTree(pos)
     }
   }
 
@@ -62,7 +67,9 @@ object JTreeTraverse {
         traverseLetExpr(that)
 
       case that: JCTree.JCErroneous =>
-        traverseErroneous(that)
+        errorHanlder.fail(pos.line, Some("traverseExpr"),
+          s"Errors found when parsing: ${that.getErrorTrees}", Fatal)
+        ErrorTree(pos)
 
       case that: JCTree.JCAnnotatedType =>
         traverseAnnotatedType(that)
@@ -352,14 +359,6 @@ object JTreeTraverse {
     val tp = JExprType(letExpr.`type`)
 
     LetExpr(defs, expr, tp)
-  }
-
-  private def traverseErroneous(erroneous: JCTree.JCErroneous)(
-      implicit pos: Position): Erroneous = {
-    val trees = erroneous.getErrorTrees.map(traverseTree).toList
-    val tp = JExprType(erroneous.`type`)
-
-    Erroneous(trees, tp)
   }
 
   private def traverseAnnotatedType(annType: JCTree.JCAnnotatedType)(
