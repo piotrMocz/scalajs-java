@@ -49,9 +49,6 @@ case class LetExpr(defs: List[VarDecl], expr: Tree, tp: Type)(
 case class Annotation(annotationType: Tree, args: List[Expr], tp: Type)(
     implicit val pos: Position) extends Expr
 
-case class Erroneous(trees: List[Tree], tp: Type)(
-    implicit val pos: Position) extends Expr
-
 case class AnnotatedType(annotations: List[Annotation], underlyingType: Expr,
     tp: Type)(implicit val pos: Position) extends Expr
 

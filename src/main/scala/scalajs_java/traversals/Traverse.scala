@@ -45,10 +45,6 @@ trait Traverse {
       annotation.args.map(traverse), annotation.tp)(annotation.pos)
   }
 
-  def traverse(erroneous: Erroneous): Erroneous = {
-    Erroneous(erroneous.trees.map(traverse), erroneous.tp)(erroneous.pos)
-  }
-
   def traverse(annotatedType: AnnotatedType): AnnotatedType = {
     AnnotatedType(annotatedType.annotations.map(traverse),
       traverse(annotatedType.underlyingType), annotatedType.tp)(
@@ -263,7 +259,6 @@ trait Traverse {
     expression match {
       case expr: LetExpr          => traverse(expr)
       case expr: Annotation       => traverse(expr)
-      case expr: Erroneous        => traverse(expr)
       case expr: AnnotatedType    => traverse(expr)
       case expr: Wildcard         => traverse(expr)
       case expr: TypeIntersection => traverse(expr)

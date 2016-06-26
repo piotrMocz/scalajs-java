@@ -13,7 +13,7 @@ trait Pass[A, B] {
   def runPass(tree: A): B
 
   def printHeader(): Unit =
-    println("-" * 10 + name + "-" * 10)
+    println("-" * 15 + " " + name + " " + "-" * 15)
 
   def run(tree: A): B = {
     if (verbose) printHeader()

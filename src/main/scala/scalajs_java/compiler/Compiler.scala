@@ -329,9 +329,6 @@ class Compiler(val errorHanlder: ErrorHanlder) {
       case expr: Annotation =>
         ???
 
-      case expr: Erroneous =>
-        ???
-
       case expr: AnnotatedType =>
         ???
 
@@ -435,6 +432,11 @@ class Compiler(val errorHanlder: ErrorHanlder) {
 
       case expr: PolyExpr =>
         compilePolyExpr(expr)
+
+      case ErrorTree(pos) =>
+        errorHanlder.fail(pos.line, Some("compileExpr"),
+          "Errors found during one of the previous phases.", Fatal)
+        irt.EmptyTree
     }
   }
 
@@ -562,6 +564,11 @@ class Compiler(val errorHanlder: ErrorHanlder) {
 
           case LocalVar =>
             compileLocalVar(stmt)
+
+          case Method =>
+            errorHanlder.fail(pos.line, Some("compileStatement: VarDecl"),
+              "Expected: Method declaration, got: Variable Declaration", Normal)
+            irt.EmptyTree
         }
 
       case stmt: ClassDecl =>
@@ -627,12 +634,6 @@ class Compiler(val errorHanlder: ErrorHanlder) {
       case stmt: ForLoop =>
         ???
 
-      case stmt: EnhancedForLoop =>
-        ???
-
-      case stmt: ForLoop =>
-        ???
-
       case WhileLoop(cond, body) =>
         val condC = compileExpr(cond)
         val bodyC = compileStatement(body)
@@ -644,6 +645,11 @@ class Compiler(val errorHanlder: ErrorHanlder) {
         val bodyC = compileStatement(body)
 
         irt.DoWhile(bodyC, condC)
+
+      case ErrorTree(pos) =>
+        errorHanlder.fail(pos.line, Some("compileExpr"),
+          "Errors found during one of the previous phases.", Fatal)
+        irt.EmptyTree
     }
   }
 

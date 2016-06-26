@@ -67,7 +67,9 @@ class JTreeTraverse(val errorHanlder: ErrorHanlder) {
         traverseLetExpr(that)
 
       case that: JCTree.JCErroneous =>
-        traverseErroneous(that)
+        errorHanlder.fail(pos.line, Some("traverseExpr"),
+          s"Errors found when parsing: ${that.getErrorTrees}", Fatal)
+        ErrorTree(pos)
 
       case that: JCTree.JCAnnotatedType =>
         traverseAnnotatedType(that)
@@ -357,14 +359,6 @@ class JTreeTraverse(val errorHanlder: ErrorHanlder) {
     val tp = JExprType(letExpr.`type`)
 
     LetExpr(defs, expr, tp)
-  }
-
-  private def traverseErroneous(erroneous: JCTree.JCErroneous)(
-      implicit pos: Position): Erroneous = {
-    val trees = erroneous.getErrorTrees.map(traverseTree).toList
-    val tp = JExprType(erroneous.`type`)
-
-    Erroneous(trees, tp)
   }
 
   private def traverseAnnotatedType(annType: JCTree.JCAnnotatedType)(
