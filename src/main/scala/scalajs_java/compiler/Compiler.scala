@@ -1,13 +1,10 @@
 package scalajs_java.compiler
 
-
-import javax.lang.model.`type`.TypeKind
-
 import com.sun.tools.javac.code.Symbol.VarSymbol
 import com.sun.tools.javac.tree.JCTree.Tag
 import org.scalajs.core.ir
 import org.scalajs.core.ir.Definitions._
-import org.scalajs.core.ir.Trees.{ClassDef, OptimizerHints}
+import org.scalajs.core.ir.Trees.OptimizerHints
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 
 import scalajs_java.trees._
@@ -30,6 +27,11 @@ class Compiler(val errorHanlder: ErrorHanlder) {
   def getPosition(tree: Tree): Position =  tree.pos match {
     case scalajs_java.trees.Position(line) => Position(Position.SourceFile(Config.testFilePath), line, 0)
   }
+  
+  val opCompiler = new OpCompiler(errorHanlder)
+
+  val typeCompiler = new TypeCompiler(errorHanlder)
+  
 
   // Compiling constructors
 
@@ -77,7 +79,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
       compileConstructorStmt(className, classType, superClassType, stmt)
     val body = irt.Block(methodDecl.body.statements.map(compConsStmt))
 
-    val retType = methodDecl.retType.map(TypeCompiler.compileType).getOrElse(irtpe.NoType)
+    val retType = methodDecl.retType.map(typeCompiler.compileType).getOrElse(irtpe.NoType)
     val params = methodDecl.params.map(compileParam)
     val defVal = methodDecl.defVal.map(compileExpr)
     val thrown = methodDecl.thrown.map(compileExpr)
@@ -94,7 +96,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
   def compileParam(param: VarDecl): irt.ParamDef = {
     implicit val pos = getPosition(param)
     val name = irt.Ident(param.name)   // Mangler.encodeLocalSym(param.symbol)
-    val ptpe = TypeCompiler.compileType(param.varType)
+    val ptpe = typeCompiler.compileType(param.varType)
 
     irt.ParamDef(name, ptpe, mutable = false, rest = false)
   }
@@ -104,7 +106,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
     paramRef match {
       case Ident(sym, name, tp, _) =>
         val ident = irt.Ident(name)
-        val tpe = TypeCompiler.compileType(tp)
+        val tpe = typeCompiler.compileType(tp)
 
         irt.VarRef(ident)(tpe)
 
@@ -118,7 +120,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
   def compileMethodDecl(methodDecl: MethodDecl): irt.MethodDef = {
     implicit val pos = getPosition(methodDecl)
     val name = Mangler.encodeMethod(methodDecl) // irt.Ident(Mangler.mangleMethodName(methodDecl))
-    val retType = methodDecl.retType.map(TypeCompiler.compileType).getOrElse(irtpe.NoType)
+    val retType = methodDecl.retType.map(typeCompiler.compileType).getOrElse(irtpe.NoType)
     val params = methodDecl.params.map(compileParam)
     val body = compileTree(methodDecl.body)
     val defVal = methodDecl.defVal.map(compileExpr)
@@ -136,7 +138,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
   def compileFieldDef(varDecl: VarDecl): irt.FieldDef = {
     implicit val pos = getPosition(varDecl)
     val name = Mangler.encodeFieldSym(varDecl.symbol)
-    val tpe = TypeCompiler.compileType(varDecl.varType)
+    val tpe = typeCompiler.compileType(varDecl.varType)
     val init = varDecl.init.map(compileExpr)
     val modifiers = varDecl.mods
     val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
@@ -256,7 +258,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
     implicit val pos = getPosition(varDecl)
     val name = Mangler.encodeLocalSym(varDecl.symbol)
 
-    val tpe = TypeCompiler.compileType(varDecl.varType)
+    val tpe = typeCompiler.compileType(varDecl.varType)
     val init = varDecl.init.map(compileExpr).getOrElse(irtpe.zeroOf(tpe))
     val modifiers = varDecl.mods
     val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
@@ -282,8 +284,8 @@ class Compiler(val errorHanlder: ErrorHanlder) {
   def compileFieldAccess(fieldAcc: FieldAccess): irt.Select = {
     implicit val pos = getPosition(fieldAcc)
     val item = Mangler.encodeFieldSym(fieldAcc.symbol)
-    val classType = TypeCompiler.compileType(fieldAcc.selected.tp)
-    val tpe = TypeCompiler.compileType(fieldAcc.tp)
+    val classType = typeCompiler.compileType(fieldAcc.selected.tp)
+    val tpe = typeCompiler.compileType(fieldAcc.tp)
     val qualifier =
     if (Predicates.isThisSelect(fieldAcc)) {
         irt.This()(classType)
@@ -298,7 +300,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
   def compileIdent(ident: Ident): irt.VarRef = {
     implicit val pos = getPosition(ident)
     val sym = ident.symbol
-    val tpe = TypeCompiler.compileType(ident.tp)
+    val tpe = typeCompiler.compileType(ident.tp)
     val name = ident.refVar match {
       case Some(VarInfo(_, _, ClassMember)) =>
         Mangler.encodeFieldSym(sym)
@@ -364,7 +366,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
         val arrRefC = compileExpr(arrRef)
         val indexExprC = compileExpr(indexExpr)
 //        val tTag = Mangler.mangledTypeName(tp)
-        val tpC = TypeCompiler.compileType(tp)
+        val tpC = typeCompiler.compileType(tp)
 
         irt.ArraySelect(arrRefC, indexExprC)(tpC)
 
@@ -375,14 +377,14 @@ class Compiler(val errorHanlder: ErrorHanlder) {
         ???
 
       case Binary(op, left, right, tp) =>
-        val opC = OpCompiler.compileBinopCode(op, left.tp)
+        val opC = opCompiler.compileBinopCode(op, left.tp)
         val leftC = compileExpr(left)
         val rightC = compileExpr(right)
 
         irt.BinaryOp(opC, leftC, rightC)
 
       case Unary(op, arg, tp) =>
-        val opC = OpCompiler.compileBinopCode(op, arg.tp)
+        val opC = opCompiler.compileBinopCode(op, arg.tp)
         val argC = compileExpr(arg)
         val binOpC = irt.BinaryOp(opC, argC, irt.IntLiteral(1))
         val assignC = irt.Assign(argC, binOpC)
@@ -392,7 +394,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
             irt.Block(assignC, argC)
 
           case Tag.POSTINC | Tag.POSTDEC =>
-            val tmpType = TypeCompiler.compileType(tp)
+            val tmpType = typeCompiler.compileType(tp)
             val tmpName = irt.Ident("tmp12345")  // TODO
             val tmpVarDef = irt.VarDef(tmpName, tmpType, mutable = true, argC)
             val tmpVarRef = irt.VarRef(tmpName)(tmpType)
@@ -446,12 +448,12 @@ class Compiler(val errorHanlder: ErrorHanlder) {
         val condC = compileExpr(cond)
         val thenpC = compileExpr(thenp)
         val elsepC = compileExpr(elsep)
-        val tpeC = TypeCompiler.compileType(tpe)
+        val tpeC = typeCompiler.compileType(tpe)
 
         irt.If(condC, thenpC, elsepC)(tpeC)
 
       case NewClass(ident, tArgs, args, clsBody, enclExpr, tp) =>
-        val clsC = TypeCompiler.compileClassType(ident)
+        val clsC = typeCompiler.compileClassType(ident)
         val mangledArgs = args.map(arg => Mangler.mangleType(arg.tp)).mkString("__")
         val ctorC = irt.Ident("init___" + mangledArgs, Some("<init>__" + mangledArgs))
         val argsC = args.map(compileExpr)
@@ -478,8 +480,8 @@ class Compiler(val errorHanlder: ErrorHanlder) {
 
         methodSel match {
           case fa@FieldAccess(name, sym, selected, _) =>
-            val classType = TypeCompiler.compileType(selected.tp)
-            val tpC = TypeCompiler.compileType(tp)
+            val classType = typeCompiler.compileType(selected.tp)
+            val tpC = typeCompiler.compileType(tp)
             val argsC = args.map(compileTree)
             val qualifier =
               if (Predicates.isThisSelect(fa)) {

@@ -7,7 +7,10 @@ import scalajs_java.traversals.JTreeTraverse
 import scalajs_java.trees.CompilationUnit
 import scalajs_java.utils.{CompilerPhase, ErrorHanlder}
 
-class JTraversePass extends Pass[JCTree.JCCompilationUnit, CompilationUnit] {
+class JTraversePass(override val verbose: Boolean=false) extends Pass[JCTree.JCCompilationUnit, CompilationUnit] {
+
+  override val name = "Java AST Traversal"
+
   override val errorHandler: ErrorHanlder =
     new ErrorHanlder(CompilerPhase("Java AST -> Scala AST"))
 

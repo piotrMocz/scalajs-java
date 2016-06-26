@@ -1,16 +1,16 @@
 package scalajs_java.compiler
 
-import com.sun.tools.javac.code.{Type => JType, TypeTag}
+import com.sun.tools.javac.code.{TypeTag, Type => JType}
 import org.scalajs.core.ir.{Types => irtpe}
 
 import scalajs_java.trees.{ArrayTypeTree, Ident, _}
-import scalajs_java.utils.Mangler
+import scalajs_java.utils.{ErrorHanlder, Mangler, Normal}
 
 /** Compilation of types only.
   *
   * The methods return instances of `irtpe.Type`
   */
-object TypeCompiler {
+class TypeCompiler(errorHanlder: ErrorHanlder) {
 
   def isArrayType(jExprType: JExprType): Boolean =
     jExprType.jtype.getTag == TypeTag.ARRAY
@@ -30,8 +30,9 @@ object TypeCompiler {
     case TypeTag.LONG    => irtpe.LongType
     case TypeTag.SHORT   => irtpe.IntType
     case TypeTag.VOID    => irtpe.NoType
-    case _               => throw new Exception(
-      "[compilePrimitiveType] Not a primitive type")
+    case _               => errorHanlder.fail(0, Some("compilePrimitiveType"),
+        s"Not a primitive type: $tTag", Normal)
+      irtpe.NoType
   }
 
   def compileClassType(tpe: JType): irtpe.Type =
@@ -61,7 +62,11 @@ object TypeCompiler {
     else if (tpe.toString.endsWith("[][][]")) 3
     else if (tpe.toString.endsWith("[][]")) 2
     else if (tpe.toString.endsWith("[]")) 1
-    else throw new Exception("Cannot handle arrays with ndims > 5")
+    else {
+      errorHanlder.fail(0, Some("getArrayDims"),
+          "Can only compile arrays up to 5 dimenstions", Normal)
+      0
+    }
   }
 
   def getArrayDims(typeTree: Tree): Int = typeTree match {
@@ -79,8 +84,10 @@ object TypeCompiler {
       Mangler.encodeClassType(id.symbol)
 
     case _ =>
-      throw new Exception(
-        s"[compileClassType] Not a class type tree: ${typeTree.toString}")
+      errorHanlder.fail(0, Some("compileClassType"),
+        s"[compileClassType] Not a class type tree: ${typeTree.toString}",
+        Normal)
+      irtpe.ClassType("")
   }
 
   /** Compile a type encoded as an AST node */

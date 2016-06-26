@@ -4,10 +4,11 @@ import com.sun.source.tree.LambdaExpressionTree.BodyKind
 import com.sun.source.tree.MemberReferenceTree
 import com.sun.tools.javac.code.TypeTag
 import com.sun.tools.javac.tree.JCTree
+import org.scalajs.core.ir.Trees
 
 import scala.collection.JavaConversions._
 import scalajs_java.trees._
-import scalajs_java.utils.ErrorHanlder
+import scalajs_java.utils.{ErrorHanlder, Fatal, Normal}
 
 /** Converts the JCTree into Scala representation (from `Tree.scala`). */
 class JTreeTraverse(val errorHanlder: ErrorHanlder) {
@@ -44,11 +45,14 @@ class JTreeTraverse(val errorHanlder: ErrorHanlder) {
         traverseModifiers(that)
 
       case that: JCTree.JCCompilationUnit =>
-        throw new Exception("[traverseTree] Cannot have nested compilation units")
+        errorHanlder.fail(pos.line, Some("traverseTree"),
+          "Cannot have nested compilation units", Fatal)
+        ErrorTree(pos)
 
       case that =>
-        println("Node not handled yet: " + that.getTag.toString)
-        Skip()
+        errorHanlder.fail(pos.line, Some("traverseTree"),
+          s"Node not handled yet: ${that.getTag.toString}", Normal)
+        ErrorTree(pos)
     }
   }
 

@@ -4,7 +4,10 @@ import scalajs_java.traversals.ScopedTraverse
 import scalajs_java.trees.CompilationUnit
 import scalajs_java.utils.{CompilerPhase, ErrorHanlder}
 
-class RefTagPass extends Pass[CompilationUnit, CompilationUnit] {
+class RefTagPass(override val verbose: Boolean=false) extends Pass[CompilationUnit, CompilationUnit] {
+
+  override val name = "Variable reference tagging"
+
   override val errorHandler: ErrorHanlder =
     new ErrorHanlder(CompilerPhase("Variable ref tagging"))
 

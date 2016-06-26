@@ -14,29 +14,14 @@ object Main {
     val javaCompiler = new CompilerInterface()
     javaCompiler.compile(Config.testFilePath)
 
-    println("------------------------- Scala AST ----------------------")
-    val tree = (new JTraversePass).run(javaCompiler.compilationUnit)
-    println(tree.toString)
-    println("\n\n")
+    val tree = new JTraversePass(verbose = Config.verbose).run(
+        javaCompiler.compilationUnit)
 
-    println("------------------------- Traversals ----------------------")
+    val opTree = new OpTraversePass(verbose = Config.verbose).run(tree)
 
-    println("[Operation transforming]")
-    val opTree = (new OpTraversePass).run(tree)
-    println(opTree)
-    println("\n\n")
+    val taggedTree = new RefTagPass(verbose = Config.verbose).run(opTree)
 
-
-    val taggedTree = (new RefTagPass).run(opTree)
-    println("[reference tagging]")
-    println(taggedTree)
-    println("\n\n")
-
-    println("---------------------------- IR  -------------------------")
-    val ir = (new CompilerPass).run(taggedTree)
-    println(ir)
-    println("\n\n")
-
+    val ir = new CompilerPass(verbose = Config.verbose).run(taggedTree)
 
     println("------------------------ Running -------------------------")
     compileAndRun(taggedTree)
