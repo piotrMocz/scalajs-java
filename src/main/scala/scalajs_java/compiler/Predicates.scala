@@ -15,7 +15,7 @@ object Predicates {
   }
 
   def isSuperCall(stmt: Statement): Boolean = stmt match {
-    case ExprStatement(MethodInv(Ident(_, name, _, _), _, _, _, _)) =>
+    case ExprStatement(MethodInv(Ident(_, name, _, _, _), _, _, _, _)) =>
       name.str == "super"
 
     case _ =>
@@ -23,7 +23,7 @@ object Predicates {
   }
 
   def isThisSelect(fieldAcc: FieldAccess): Boolean = fieldAcc.selected match {
-    case Ident(_, name, tp, _) => name.str == "this"
+    case Ident(_, name, tp, _, _) => name.str == "this"
     case _                     => false
   }
 
@@ -35,7 +35,7 @@ object Predicates {
   def isPrintMethodInv(methodInv: MethodInv): Boolean = {
     methodInv.methodSel match {
       case FieldAccess(Name(mName), _, FieldAccess(Name("out"), _,
-      Ident(_, Name("System"), _, _), _), _)
+      Ident(_, Name("System"), _, _, _), _), _)
         if mName == "println" || mName == "print" =>
         true
 

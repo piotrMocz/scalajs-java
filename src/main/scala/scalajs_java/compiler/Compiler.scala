@@ -500,8 +500,6 @@ class Compiler(val errorHanlder: ErrorHandler) {
             irt.Apply(qualifier, methodName, argsC)(tpC)
 
           case id@Ident(sym, name, tpe, refVar, enclClass) =>
-            // TODO handle the case in which we call a method without qualification
-            // (either a static one or a member)
             val className = encodeClassName(enclClass.get)
             val classType =
               irtpe.ClassType(className + (if (isStatic) "$" else ""))
