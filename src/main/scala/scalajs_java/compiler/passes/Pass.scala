@@ -1,6 +1,6 @@
 package scalajs_java.compiler.passes
 
-import scalajs_java.utils.ErrorHanlder
+import scalajs_java.utils.ErrorHandler
 
 trait Pass[A, B] {
 
@@ -8,7 +8,7 @@ trait Pass[A, B] {
 
   val name: String
 
-  val errorHandler: ErrorHanlder
+  val errorHandler: ErrorHandler
 
   def runPass(tree: A): B
 

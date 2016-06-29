@@ -131,7 +131,8 @@ trait Traverse {
 
   def traverse(methodInv: MethodInv): MethodInv = {
     MethodInv(traverse(methodInv.methodSel), methodInv.typeArgs.map(traverse),
-      methodInv.args.map(traverse), methodInv.tp)(methodInv.pos)
+      methodInv.args.map(traverse), methodInv.tp, methodInv.refDecl)(
+      methodInv.pos)
   }
 
   def traverse(conditional: Conditional): Conditional = {

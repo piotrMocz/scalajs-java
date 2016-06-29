@@ -5,10 +5,10 @@ import com.sun.tools.javac.tree.JCTree.Tag
 import org.scalajs.core.ir.Trees.{BinaryOp, UnaryOp}
 
 import scalajs_java.trees.{JExprType, Type}
-import scalajs_java.utils.{ErrorHanlder, Normal}
+import scalajs_java.utils.{ErrorHandler, Normal}
 
 /** Compiles/translates the operations like +, -, etc.*/
-class OpCompiler(errorHanlder: ErrorHanlder) {
+class OpCompiler(errorHanlder: ErrorHandler) {
 
   def compileBinopCode(op: Tag, tpe: Type): BinaryOp.Code = {
     def fail(tag: TypeTag): Int = {

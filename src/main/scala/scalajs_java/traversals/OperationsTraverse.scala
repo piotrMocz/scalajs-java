@@ -6,10 +6,10 @@ import com.sun.tools.javac.code.TypeTag
 import com.sun.tools.javac.tree.JCTree.Tag
 
 import scalajs_java.trees._
-import scalajs_java.utils.ErrorHanlder
+import scalajs_java.utils.ErrorHandler
 
 /** Transorms Java-specific operations to their Scala equivalents */
-class OperationsTraverse(val errorHanlder: ErrorHanlder) extends Traverse {
+class OperationsTraverse(val errorHanlder: ErrorHandler) extends Traverse {
 
   def convertASGtoOp(op: Tag): Tag = op match {
     case Tag.BITOR_ASG  => Tag.BITOR

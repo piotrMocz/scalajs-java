@@ -5,15 +5,15 @@ import org.scalajs.core.ir.Trees.ClassDef
 
 import scalajs_java.compiler.Compiler
 import scalajs_java.trees.CompilationUnit
-import scalajs_java.utils.{CompilerPhase, ErrorHanlder}
+import scalajs_java.utils.{CompilerPhase, ErrorHandler}
 
 
 class CompilerPass(override val verbose: Boolean=false) extends Pass[CompilationUnit, (List[irt.ClassDef], String)] {
 
   override val name = "Compiler Pass"
 
-  override val errorHandler: ErrorHanlder =
-    new ErrorHanlder(CompilerPhase("Compilation (AST -> IR)"))
+  override val errorHandler: ErrorHandler =
+    new ErrorHandler(CompilerPhase("Compilation (AST -> IR)"))
 
   private val compiler = new Compiler(errorHandler)
 

@@ -14,7 +14,7 @@ import scalajs_java.Config
 
 /** Main compiler.
   */
-class Compiler(val errorHanlder: ErrorHanlder) {
+class Compiler(val errorHanlder: ErrorHandler) {
   var MainObjectFullName = ""
 
   private final def objectClassIdent(implicit pos: Position) =
@@ -104,7 +104,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
   def compileParamRef(paramRef: Expr): irt.Tree = {
     implicit val pos = getPosition(paramRef)
     paramRef match {
-      case Ident(sym, name, tp, _) =>
+      case Ident(sym, name, tp, _, _) =>
         val ident = irt.Ident(name)
         val tpe = typeCompiler.compileType(tp)
 
@@ -151,7 +151,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
 
   def compileExtendsClause(extendsCl: Option[Expr])(
       implicit pos: Position): (irt.Ident, irtpe.ClassType) = extendsCl match {
-    case  Some(Ident(sym, _, _, _)) =>
+    case  Some(Ident(sym, _, _, _, _)) =>
       val name = Mangler.encodeClassFullNameIdent(sym)
       val tpe = Mangler.encodeClassType(sym)
 
@@ -270,7 +270,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
   def compileSelectIdent(expr: Expr): irt.Ident = {
     implicit val pos = getPosition(expr)
     expr match {
-      case Ident(sym, _, _, _) =>
+      case Ident(sym, _, _, _, _) =>
         if (sym.isLocal) Mangler.encodeLocalSym(sym)
         else Mangler.encodeFieldSym(sym.asInstanceOf[VarSymbol]) // TODO
 
@@ -479,17 +479,39 @@ class Compiler(val errorHanlder: ErrorHanlder) {
     refDecl match {
       case Some(methodInfo@MethodInfo(_, _, _)) =>
         val methodName = Mangler.encodeMethod(methodInfo.decl)
+        val isStatic = Predicates.isStatic(methodInfo.decl)
 
         methodSel match {
           case fa@FieldAccess(name, sym, selected, _) =>
-            val classType = typeCompiler.compileType(selected.tp)
+            val _classType = typeCompiler.compileType(selected.tp)
+            val classType =
+              if (isStatic) irtpe.ClassType(_classType.show() + "$")
+              else _classType
             val tpC = typeCompiler.compileType(tp)
             val argsC = args.map(compileTree)
             val qualifier =
-              if (Predicates.isThisSelect(fa)) {
+              if (Predicates.isThisSelect(fa) | isStatic) {
                 irt.This()(classType)
               } else {
                 val ident = compileSelectIdent(selected)
+                irt.VarRef(ident)(classType)
+              }
+
+            irt.Apply(qualifier, methodName, argsC)(tpC)
+
+          case id@Ident(sym, name, tpe, refVar, enclClass) =>
+            // TODO handle the case in which we call a method without qualification
+            // (either a static one or a member)
+            val className = encodeClassName(enclClass.get)
+            val classType =
+              irtpe.ClassType(className + (if (isStatic) "$" else ""))
+            val tpC = typeCompiler.compileType(tp)
+            val argsC = args.map(compileTree)
+            val qualifier =
+              if (isStatic) {
+                irt.This()(classType)
+              } else {
+                val ident = compileSelectIdent(id)
                 irt.VarRef(ident)(classType)
               }
 
@@ -503,7 +525,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
 
       case _ =>
         errorHanlder.fail(pos.line, Some("compileMethodSelect"),
-          "failed to determine which method does the identifier refer to.",
+          s"failed to determine which method does the identifier ($methodSel) refer to.",
           Normal)
         irt.EmptyTree
 
@@ -512,6 +534,7 @@ class Compiler(val errorHanlder: ErrorHanlder) {
 
   def compileMethodInv(methodInv: MethodInv): irt.Tree = {
     implicit val pos = getPosition(methodInv)
+
     if (Predicates.isPrintMethodInv(methodInv)) {
       val body = compileTree(methodInv.args.head)
       Definitions.printMethod(body)

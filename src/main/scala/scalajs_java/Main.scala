@@ -21,10 +21,12 @@ object Main {
 
     val taggedTree = new RefTagPass(verbose = Config.verbose).run(opTree)
 
-    val ir = new CompilerPass(verbose = Config.verbose).run(taggedTree)
+    val fullTree = new EnclClassPass(verbose = Config.verbose).run(taggedTree)
+
+    val ir = new CompilerPass(verbose = Config.verbose).run(fullTree)
 
     println("------------------------ Running -------------------------")
-    compileAndRun(taggedTree)
+    compileAndRun(fullTree)
 
   }
 

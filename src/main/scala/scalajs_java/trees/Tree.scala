@@ -8,6 +8,7 @@ import javax.lang.model.`type`.TypeKind
 
 import com.sun.tools.javac.code.Symbol.{ClassSymbol, MethodSymbol, VarSymbol}
 import com.sun.tools.javac.tree.JCTree.Tag
+import sun.reflect.generics.scope.ClassScope
 
 import scalajs_java.utils.ScopeElem
 
@@ -96,7 +97,7 @@ case class ClassLiteral(value: Any, tp: Type)(
     implicit val pos: Position) extends Literal
 
 case class Ident(symbol: Symbol, name: Name, tp: Type,
-    refVar: Option[ScopeElem]=None)(
+    refVar: Option[ScopeElem]=None, enclClass: Option[String]=None)(
     implicit val pos: Position) extends Expr
 
 case class FieldAccess(name: Name, symbol: Symbol, selected: Expr, tp: Type)(

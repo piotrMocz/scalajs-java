@@ -15,8 +15,8 @@ import org.scalajs.core.tools.logging._
 import org.scalajs.jsenv.JSConsole
 
 import scalajs_java.compiler.Compiler
-import scalajs_java.compiler.passes.{CompilerPass, JTraversePass, OpTraversePass, RefTagPass}
-import scalajs_java.traversals.{JTreeTraverse, OperationsTraverse, ScopedTraverse}
+import scalajs_java.compiler.passes._
+import scalajs_java.traversals.{EnclClassTraverse, JTreeTraverse, OperationsTraverse, RefTraverse}
 
 /** Blackbox tests */
 class SimpleRunTest {
@@ -41,8 +41,9 @@ class SimpleRunTest {
     val tree = (new JTraversePass).run(javaCompiler.compilationUnit)
     val opTree = (new OpTraversePass).run(tree)
     val taggedTree = (new RefTagPass).run(opTree)
+    val fullTree = (new EnclClassPass).run(taggedTree)
 
-    val compRes = (new CompilerPass).run(taggedTree)
+    val compRes = (new CompilerPass).run(fullTree)
     val classDefs = compRes._1
     val mainObjectName = encodeClassName("Test") + "$"
 
@@ -248,5 +249,89 @@ class SimpleRunTest {
         |int foo(int mpar1, int mpar2) { return this.x + mpar1 + mpar2; }
       """.stripMargin)
 
+  }
+
+  @Test def runUnqualifiedStaticMethod(): Unit = {
+    assertRun("42",
+      """
+        |foo();
+      """.stripMargin,
+      """
+        |static void foo() {
+        |  System.out.println(42);
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |System.out.println(foo());
+      """.stripMargin,
+      """
+        |static int foo() {
+        |  return 42;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |System.out.println(foo(21));
+      """.stripMargin,
+      """
+        |static int foo(int x) {
+        |  return x * 2;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |System.out.println(foo(9, 10, 11, 12));
+      """.stripMargin,
+      """
+        |static int foo(int x, int y, int z, int w) {
+        |  return x + y + z + w;
+        |}
+      """.stripMargin)
+  }
+
+  @Test def runStaticMethod(): Unit = {
+    assertRun("42",
+      """
+        |Test.foo();
+      """.stripMargin,
+      """
+        |static void foo() {
+        |  System.out.println(42);
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |System.out.println(Test.foo());
+      """.stripMargin,
+      """
+        |static int foo() {
+        |  return 42;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |System.out.println(Test.foo(21));
+      """.stripMargin,
+      """
+        |static int foo(int x) {
+        |  return x * 2;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |System.out.println(Test.foo(9, 10, 11, 12));
+      """.stripMargin,
+      """
+        |static int foo(int x, int y, int z, int w) {
+        |  return x + y + z + w;
+        |}
+      """.stripMargin)
   }
 }

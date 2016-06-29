@@ -61,7 +61,7 @@ object CompilerError {
   }
 }
 
-class ErrorHanlder(private val phase: CompilerPhase) {
+class ErrorHandler(private val phase: CompilerPhase) {
 
   private val errors = MList.empty[Error]
 

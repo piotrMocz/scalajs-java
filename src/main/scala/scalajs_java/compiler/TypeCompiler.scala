@@ -4,13 +4,13 @@ import com.sun.tools.javac.code.{TypeTag, Type => JType}
 import org.scalajs.core.ir.{Types => irtpe}
 
 import scalajs_java.trees.{ArrayTypeTree, Ident, _}
-import scalajs_java.utils.{ErrorHanlder, Mangler, Normal}
+import scalajs_java.utils.{ErrorHandler, Mangler, Normal}
 
 /** Compilation of types only.
   *
   * The methods return instances of `irtpe.Type`
   */
-class TypeCompiler(errorHanlder: ErrorHanlder) {
+class TypeCompiler(errorHanlder: ErrorHandler) {
 
   def isArrayType(jExprType: JExprType): Boolean =
     jExprType.jtype.getTag == TypeTag.ARRAY
@@ -100,12 +100,19 @@ class TypeCompiler(errorHanlder: ErrorHanlder) {
       val tname = Mangler.mangleType(getArrayElemType(elemType))
       irtpe.ArrayType(tname, dims)
 
-    case ident@Ident(sym, _, _, _) =>
-      if (sym.toString == "java.lang.String") irtpe.StringType
+    case ident: Ident =>
+      if (ident.symbol.toString == "java.lang.String") irtpe.StringType
       else compileClassType(ident)  // TODO there're more cases, I guess
 
     case _ =>
       ???
+  }
+
+  def enclosingClassType(tpe: Type): irtpe.Type = tpe match {
+    case StatementType    => irtpe.NoType
+    case JExprType(jtype) =>
+      println("ENCL TYPE: " + jtype.getReceiverType)
+      compileType(JExprType(jtype.getEnclosingType))
   }
 
 }

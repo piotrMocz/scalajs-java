@@ -15,7 +15,7 @@ import org.scalajs.core.ir.{Trees => irt, Types => irtpe}
 
 import scalajs_java.compiler._
 import scalajs_java.trees._
-import scalajs_java.utils.{CompilerPhase, ErrorHanlder}
+import scalajs_java.utils.{CompilerPhase, ErrorHandler}
 
 /** Whitebox tests */
 class CompilerTest {
@@ -23,7 +23,7 @@ class CompilerTest {
   private implicit val DummyPos = ir.Position(ir.Position.SourceFile(Config.testFilePath), 0, 0)
   private implicit val DummyPos2 = Position(0)
 
-  private val errorHanlder = new ErrorHanlder(CompilerPhase("Test compile"))
+  private val errorHanlder = new ErrorHandler(CompilerPhase("Test compile"))
   private val compiler = new Compiler(errorHanlder)
 
   private val MainObjectFullName = compiler.MainObjectFullName

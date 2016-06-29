@@ -17,7 +17,7 @@ case class LibraryMethod(name: String) extends ScopeElem {
 
 trait Scope {
 
-  val errorHanlder: ErrorHanlder
+  val errorHanlder: ErrorHandler
 
   type ScopeT = MMap[String, List[ScopeElem]]
 
