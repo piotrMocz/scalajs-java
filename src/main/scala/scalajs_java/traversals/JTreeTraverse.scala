@@ -331,7 +331,7 @@ class JTreeTraverse(val errorHanlder: ErrorHandler) {
     val initializer = Option(varDecl.getInitializer).map(traverseExpr)
     val modifiers = traverseModifiers(varDecl.getModifiers)
     val symbol = varDecl.sym
-    val name = Name.fromJName(varDecl.getName)
+    val name = Name.fromJName(varDecl.name)
     val nameExpr = Option(varDecl.getNameExpression).map(traverseExpr)
     val tpe = traverseTree(varDecl.getType)
     val newKind = if (symbol.isLocal && kind == ClassMember) LocalVar else kind
@@ -341,7 +341,7 @@ class JTreeTraverse(val errorHanlder: ErrorHandler) {
 
   private def traverseClassDecl(classDecl: JCTree.JCClassDecl)(
       implicit pos: Position): ClassDecl = {
-    val name = Name.fromJName(classDecl.getSimpleName)
+    val name = Name.fromJName(classDecl.sym.fullname)
     val symbol = classDecl.sym
     val typeParams = classDecl.getTypeParameters.map(traverseTypeParam).toList
     val extendsCl = Option(classDecl.getExtendsClause).map(traverseExpr)

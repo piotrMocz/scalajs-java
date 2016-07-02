@@ -4,7 +4,7 @@ import com.sun.tools.javac.code.{TypeTag, Type => JType}
 import org.scalajs.core.ir.{Types => irtpe}
 
 import scalajs_java.trees.{ArrayTypeTree, Ident, _}
-import scalajs_java.utils.{ErrorHandler, Mangler, Normal}
+import scalajs_java.utils.{ErrorHandler, Fatal, Mangler, Normal}
 
 /** Compilation of types only.
   *
@@ -83,6 +83,9 @@ class TypeCompiler(errorHanlder: ErrorHandler) {
     case id: Ident =>
       Mangler.encodeClassType(id.symbol)
 
+    case fa: FieldAccess =>
+      Mangler.encodeClassType(fa.symbol)
+
     case _ =>
       errorHanlder.fail(0, Some("compileClassType"),
         s"[compileClassType] Not a class type tree: ${typeTree.toString}",
@@ -104,8 +107,13 @@ class TypeCompiler(errorHanlder: ErrorHandler) {
       if (ident.symbol.toString == "java.lang.String") irtpe.StringType
       else compileClassType(ident)  // TODO there're more cases, I guess
 
+    case fa: FieldAccess =>
+      compileClassType(fa)
+
     case _ =>
-      ???
+      errorHanlder.fail(0, Some("compileType"),
+        s"Missing implementation (trying to compile: $tpe)", Fatal)
+      null
   }
 
   def enclosingClassType(tpe: Type): irtpe.Type = tpe match {
