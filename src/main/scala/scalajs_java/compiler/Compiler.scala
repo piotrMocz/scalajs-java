@@ -15,7 +15,7 @@ import scalajs_java.Config
 /** Main compiler.
   */
 class Compiler(val errorHanlder: ErrorHandler) {
-  var MainObjectFullName = ""
+  var MainObjectFullName: Option[String] = None
 
   private final def objectClassIdent(implicit pos: Position) =
     irt.Ident(ObjectClass, Some("java.lang.Object"))
@@ -216,7 +216,7 @@ class Compiler(val errorHanlder: ErrorHandler) {
     val hashed = ir.Hashers.hashClassDef(classDef)
 
     companionObjects = hashed :: companionObjects
-    if (Predicates.isMainClass(classDecl)) MainObjectFullName = className
+    if (Predicates.isMainClass(classDecl)) MainObjectFullName = Some(className)
   }
 
   /** Returns both the class and its companion object */
@@ -712,7 +712,7 @@ class Compiler(val errorHanlder: ErrorHandler) {
     }
   }
 
-  def compile(compilationUnit: CompilationUnit): (List[irt.ClassDef], String) = {
+  def compile(compilationUnit: CompilationUnit): (List[irt.ClassDef], Option[String]) = {
     implicit val pos = getPosition(compilationUnit)
 
     companionObjects = Nil

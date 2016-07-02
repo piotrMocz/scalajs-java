@@ -8,7 +8,8 @@ import scalajs_java.trees.CompilationUnit
 import scalajs_java.utils.{CompilerPhase, ErrorHandler}
 
 
-class CompilerPass(override val verbose: Boolean=false) extends Pass[CompilationUnit, (List[irt.ClassDef], String)] {
+class CompilerPass(override val verbose: Boolean=false)
+    extends Pass[CompilationUnit, (List[irt.ClassDef], Option[String])] {
 
   override val name = "Compiler Pass"
 
@@ -17,6 +18,6 @@ class CompilerPass(override val verbose: Boolean=false) extends Pass[Compilation
 
   private val compiler = new Compiler(errorHandler)
 
-  override def runPass(tree: CompilationUnit): (List[ClassDef], String) =
+  override def runPass(tree: CompilationUnit): (List[ClassDef], Option[String]) =
     compiler.compile(tree)
 }

@@ -31,8 +31,8 @@ class TypeCompiler(errorHanlder: ErrorHandler) {
     case TypeTag.LONG    => irtpe.LongType
     case TypeTag.SHORT   => irtpe.IntType
     case TypeTag.VOID    => irtpe.NoType
-    case _               => errorHanlder.fail(0, Some("compilePrimitiveType"),
-      s"Not a primitive type: $tTag", Normal)
+    case _               => errorHanlder.fail(pos.line,
+      Some("compilePrimitiveType"), s"Not a primitive type: $tTag", Normal)
       irtpe.NoType
   }
 
@@ -64,7 +64,7 @@ class TypeCompiler(errorHanlder: ErrorHandler) {
     else if (tpe.toString.endsWith("[][]")) 2
     else if (tpe.toString.endsWith("[]")) 1
     else {
-      errorHanlder.fail(0, Some("getArrayDims"),
+      errorHanlder.fail(pos.line, Some("getArrayDims"),
           "Can only compile arrays up to 5 dimenstions", Normal)
       0
     }
