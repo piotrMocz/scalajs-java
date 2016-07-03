@@ -18,6 +18,7 @@ import org.scalajs.jsenv.JSConsole
 import scalajs_java.compiler.Compiler
 import scalajs_java.compiler.passes._
 import scalajs_java.traversals.{EnclClassTraverse, JTreeTraverse, OperationsTraverse, RefTraverse}
+import scalajs_java.utils.Scope
 
 /** Blackbox tests */
 class SimpleRunTest {
@@ -45,7 +46,7 @@ class SimpleRunTest {
 
     val tree = (new JTraversePass).run(javaCompiler.compilationUnit)
     val opTree = (new OpTraversePass).run(tree)
-    val taggedTree = (new RefTagPass).run(opTree)
+    val taggedTree = new RefTagPass(scope = Scope.empty).run(opTree)
     val fullTree = (new EnclClassPass).run(taggedTree)
 
     val compRes = (new CompilerPass).run(fullTree)

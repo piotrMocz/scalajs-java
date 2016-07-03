@@ -1,4 +1,4 @@
-package scalajs_java.compiler
+package scalajs_java.utils
 
 import javax.lang.model.element.Modifier
 
@@ -61,9 +61,36 @@ object Predicates {
       false
   }
 
+  def isPrivate(tree: Tree): Boolean = tree match {
+    case cDecl: ClassDecl =>
+      cDecl.symbol.isPrivate
+
+    case mDecl: MethodDecl =>
+      mDecl.symbol.isPrivate
+
+    case fDecl: VarDecl if fDecl.kind == ClassMember =>
+      fDecl.symbol.isPrivate
+
+    case _ =>
+      false
+  }
+
   def isStringType(tpe: Type): Boolean = tpe match {
     case JExprType(jtype) => jtype.toString == "java.lang.String"
     case _                => false
   }
+
+  def isMethod(tree: Tree) = tree match {
+    case _: MethodDecl => true
+    case _             => false
+  }
+
+  def isField(tree: Tree) = tree match {
+    case vd: VarDecl if vd.kind == ClassMember => true
+    case _                                     => false
+  }
+
+  def isClassMember(tree: Tree) =
+    isMethod(tree) || isField(tree)
 
 }
