@@ -8,14 +8,11 @@ package scalajs_java
 
 import org.junit.Assert._
 import org.junit.Test
-import org.scalajs.core.ir.Definitions._
 import org.scalajs.core.tools.logging._
 import org.scalajs.jsenv.JSConsole
 
 import scala.collection.JavaConversions._
 import scalajs_java.compiler.CompilerPipeline
-import scalajs_java.compiler.passes._
-import scalajs_java.utils.Scope
 
 /** Blackbox tests for multiple files */
 class MultifileRunTest {
@@ -53,7 +50,7 @@ class MultifileRunTest {
 
     val javaCompiler = new CompilerInterface()
     javaCompiler.compileVirtualProject(allClassNames, allSources)
-    val compilerPipeline = new CompilerPipeline
+    val compilerPipeline = new CompilerPipeline(verbose = false)
     val compResults = compilerPipeline.runPasses(javaCompiler.compilationUnits.toList)
 
     val classDefs = compResults._1
@@ -242,7 +239,7 @@ class MultifileRunTest {
             |static int x;
             |
             |static void foo() {
-            |  System.out.println(x);
+            |  System.out.println(Test2.x);
             |}
           """.stripMargin)))
   }

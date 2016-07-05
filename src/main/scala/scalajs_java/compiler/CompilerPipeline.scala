@@ -11,22 +11,22 @@ import scalajs_java.compiler.passes._
 import scalajs_java.utils.{CompilerPhase, ErrorHandler, Fatal, Scope}
 
 /** Aggregates all the passes into a single command */
-class CompilerPipeline {
+class CompilerPipeline(verbose: Boolean=Config.verbose) {
 
   val errorHandler = new ErrorHandler(CompilerPhase("Post-compile"))
 
   /** Compiles java CompilationUnit into a list of IR trees */
   def runPasses(compilationUnits: List[JCCompilationUnit]): (List[Trees.ClassDef], String) = {
     val trees = compilationUnits.map { cu =>
-      new JTraversePass(verbose = Config.verbose).run(cu)
+      new JTraversePass(verbose).run(cu)
     }
 
     val opTrees = trees.map { t =>
-      new OpTraversePass(verbose = Config.verbose).run(t)
+      new OpTraversePass(verbose).run(t)
     }
 
     val treesScopes = opTrees.map { ot =>
-      val expSymsPass = new ExpSymsPass(verb = Config.verbose)
+      val expSymsPass = new ExpSymsPass(verbose)
       expSymsPass.run(ot)
       (ot, expSymsPass.scope)
     } unzip
@@ -35,15 +35,15 @@ class CompilerPipeline {
     val scope = Scope.mkScope(treesScopes._2)
 
     val taggedTrees = opTrees2.map { ot =>
-      new RefTagPass(verbose = Config.verbose, scope).run(ot)
+      new RefTagPass(verbose, scope).run(ot)
     }
 
     val fullTrees = taggedTrees.map { tt =>
-      new EnclClassPass(verbose = Config.verbose).run(tt)
+      new EnclClassPass(verbose).run(tt)
     }
 
     val irs = fullTrees.map { ft =>
-      new CompilerPass(verbose = Config.verbose).run(ft)
+      new CompilerPass(verbose).run(ft)
     }
 
     val defsObjNames = irs.unzip

@@ -1,18 +1,22 @@
 package scalajs_java.compiler
 
-import com.sun.tools.javac.code.Symbol.VarSymbol
 import com.sun.tools.javac.tree.JCTree.Tag
 import org.scalajs.core.ir
 import org.scalajs.core.ir.Definitions._
 import org.scalajs.core.ir.Trees.OptimizerHints
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 
+import scalajs_java.Config
 import scalajs_java.trees._
 import scalajs_java.utils._
-import scalajs_java.Config
 
 
 /** Main compiler.
+  *
+  * TODO account for a case like this:
+  * static int x;
+  * static int foo() { return x; }
+  * (referring to a static field without the class name)
   */
 class Compiler(val errorHanlder: ErrorHandler) {
   var MainObjectFullName: Option[String] = None
