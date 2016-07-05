@@ -342,7 +342,28 @@ class SimpleRunTest {
       """.stripMargin)
   }
 
+  @Test def runStaticFieldAccess(): Unit = {
+    assertRun("42",
+      """
+        |Test.x = 42;
+        |System.out.println(Test.x);
+      """.stripMargin,
+      """
+        |static int x;
+      """.stripMargin)
+  }
+
   @Test def runPackageName(): Unit = {
+    assertRun("42",
+      """
+        |test.Test.x = 42;
+        |System.out.println(test.Test.x);
+      """.stripMargin,
+      """
+        |static int x;
+      """.stripMargin,
+      pkgName="test")
+
     assertRun("42",
       """
         |test.Test.foo();

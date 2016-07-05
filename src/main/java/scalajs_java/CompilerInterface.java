@@ -116,6 +116,23 @@ public class CompilerInterface {
         compilationUnits.iterator().forEachRemaining(cu -> this.compilationUnits.add(cu));
     }
 
+    public void compileVirtualProject(java.util.List<String> classNames,
+                                      java.util.List<String> sources) {
+        int N = classNames.size();
+        ArrayList<JavaFileObject> sourceObjects = new ArrayList<>(N);
+        for (int i = 0; i < N; ++i) {
+            sourceObjects.add(i, new SourceObject(classNames.get(i),
+                    sources.get(i)));
+        }
+
+        List<JCCompilationUnit> compilationUnits =
+                compiler.enterTrees(compiler.parseFiles(sourceObjects));
+
+        this.attrs = compiler.attribute(compiler.todo);
+        this.compilationUnits = new ArrayList<>(compilationUnits.size());
+        compilationUnits.iterator().forEachRemaining(cu -> this.compilationUnits.add(cu));
+    }
+
     public void printEnvs() {
         System.out.println("Envs length: " + this.attrs.size());
 
