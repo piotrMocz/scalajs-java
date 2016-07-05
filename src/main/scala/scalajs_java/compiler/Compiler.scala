@@ -1,21 +1,25 @@
 package scalajs_java.compiler
 
-import com.sun.tools.javac.code.Symbol.VarSymbol
 import com.sun.tools.javac.tree.JCTree.Tag
 import org.scalajs.core.ir
 import org.scalajs.core.ir.Definitions._
 import org.scalajs.core.ir.Trees.OptimizerHints
 import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 
+import scalajs_java.Config
 import scalajs_java.trees._
 import scalajs_java.utils._
-import scalajs_java.Config
 
 
 /** Main compiler.
+  *
+  * TODO account for a case like this:
+  * static int x;
+  * static int foo() { return x; }
+  * (referring to a static field without the class name)
   */
 class Compiler(val errorHanlder: ErrorHandler) {
-  var MainObjectFullName = ""
+  var MainObjectFullName: Option[String] = None
 
   private final def objectClassIdent(implicit pos: Position) =
     irt.Ident(ObjectClass, Some("java.lang.Object"))
@@ -145,8 +149,9 @@ class Compiler(val errorHanlder: ErrorHandler) {
       irtpe.zeroOf(tpe))
 
     // TODO what is the name expression?
+    // TODO handle init
 
-    irt.FieldDef(name, tpe, mutable = false)
+    irt.FieldDef(name, tpe, mutable = true)
   }
 
   def compileExtendsClause(extendsCl: Option[Expr])(
@@ -216,7 +221,7 @@ class Compiler(val errorHanlder: ErrorHandler) {
     val hashed = ir.Hashers.hashClassDef(classDef)
 
     companionObjects = hashed :: companionObjects
-    if (Predicates.isMainClass(classDecl)) MainObjectFullName = className
+    if (Predicates.isMainClass(classDecl)) MainObjectFullName = Some(className)
   }
 
   /** Returns both the class and its companion object */
@@ -272,7 +277,7 @@ class Compiler(val errorHanlder: ErrorHandler) {
     expr match {
       case Ident(sym, _, _, _, _) =>
         if (sym.isLocal) Mangler.encodeLocalSym(sym)
-        else Mangler.encodeFieldSym(sym.asInstanceOf[VarSymbol]) // TODO
+        else Mangler.encodeFieldSym(sym) // TODO
 
       case _ =>
         errorHanlder.fail(pos.line, Some("compileSelectIdent"),
@@ -283,12 +288,15 @@ class Compiler(val errorHanlder: ErrorHandler) {
 
   def compileFieldAccess(fieldAcc: FieldAccess): irt.Select = {
     implicit val pos = getPosition(fieldAcc)
+
     val item = Mangler.encodeFieldSym(fieldAcc.symbol)
     val classType = typeCompiler.compileType(fieldAcc.selected.tp)
     val tpe = typeCompiler.compileType(fieldAcc.tp)
     val qualifier =
-    if (Predicates.isThisSelect(fieldAcc)) {
+      if (Predicates.isThisSelect(fieldAcc)) {
         irt.This()(classType)
+      } else if (Predicates.isStatic(fieldAcc)) {
+        irt.LoadModule(irtpe.ClassType(classType.show() + "$"))
       } else {
         val ident = compileSelectIdent(fieldAcc.selected)
         irt.VarRef(ident)(classType)
@@ -483,15 +491,14 @@ class Compiler(val errorHanlder: ErrorHandler) {
 
         methodSel match {
           case fa@FieldAccess(name, sym, selected, _) =>
-            val _classType = typeCompiler.compileType(selected.tp)
-            val classType =
-              if (isStatic) irtpe.ClassType(_classType.show() + "$")
-              else _classType
+            val classType = typeCompiler.compileType(selected.tp)
             val tpC = typeCompiler.compileType(tp)
             val argsC = args.map(compileTree)
             val qualifier =
-              if (Predicates.isThisSelect(fa) | isStatic) {
+              if (Predicates.isThisSelect(fa)) {
                 irt.This()(classType)
+              } else if (isStatic) {
+                  irt.LoadModule(irtpe.ClassType(classType.show() + "$"))
               } else {
                 val ident = compileSelectIdent(selected)
                 irt.VarRef(ident)(classType)
@@ -712,7 +719,7 @@ class Compiler(val errorHanlder: ErrorHandler) {
     }
   }
 
-  def compile(compilationUnit: CompilationUnit): (List[irt.ClassDef], String) = {
+  def compile(compilationUnit: CompilationUnit): (List[irt.ClassDef], Option[String]) = {
     implicit val pos = getPosition(compilationUnit)
 
     companionObjects = Nil

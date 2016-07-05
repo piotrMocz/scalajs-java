@@ -17,11 +17,11 @@ case class LibraryMethod(name: String) extends ScopeElem {
 
 trait Scope {
 
+  import scalajs_java.utils.Scope.ScopeT
+
   val errorHanlder: ErrorHandler
 
-  type ScopeT = MMap[String, List[ScopeElem]]
-
-  val scope: ScopeT = MMap.empty
+  var scope: ScopeT = MMap.empty
 
   def addToScope(scopeElem: ScopeElem): Unit = {
     val sym = scopeElem.name
@@ -74,6 +74,14 @@ trait Scope {
 }
 
 object Scope {
+
+  type ScopeT = MMap[String, List[ScopeElem]]
+
+  def empty: ScopeT = MMap.empty
+
+  def mkScope(scopes: List[ScopeT]): ScopeT =
+    scopes.reduce {_ ++ _}
+
   /* TODO make only `System.out.println` a library method,
    * not every `println` */
   val libraryMethods = Map[String, ScopeElem](

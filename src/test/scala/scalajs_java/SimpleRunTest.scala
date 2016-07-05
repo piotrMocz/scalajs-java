@@ -11,18 +11,23 @@ import org.junit.Assert._
 import org.scalajs.core.ir
 import ir.{Trees => irt, Types => irtpe}
 import ir.Definitions._
+import org.scalajs.core.ir.Printers.IRTreePrinter
 import org.scalajs.core.tools.logging._
 import org.scalajs.jsenv.JSConsole
 
 import scalajs_java.compiler.Compiler
 import scalajs_java.compiler.passes._
 import scalajs_java.traversals.{EnclClassTraverse, JTreeTraverse, OperationsTraverse, RefTraverse}
+import scalajs_java.utils.Scope
 
 /** Blackbox tests */
 class SimpleRunTest {
 
-  private def wrapperMainClass(defs: String, s: String): String =
+  private def wrapperMainClass(defs: String, s: String,
+      pkgName: String): String =
     s"""
+      |${if (pkgName.isEmpty) "" else "package " + pkgName + ";"}
+      |
       |class Test {
       |  $defs
       |
@@ -32,20 +37,22 @@ class SimpleRunTest {
       |}
     """.stripMargin
 
-  private def assertRun(expected: Any, code: String, defs: String=""): Unit = {
-    val source = wrapperMainClass(defs, code)
+  private def assertRun(expected: Any, code: String, defs: String="",
+      pkgName: String=""): Unit = {
+    val source = wrapperMainClass(defs, code, pkgName)
 
     val javaCompiler = new CompilerInterface()
     javaCompiler.compile("Test", source)
 
     val tree = (new JTraversePass).run(javaCompiler.compilationUnit)
     val opTree = (new OpTraversePass).run(tree)
-    val taggedTree = (new RefTagPass).run(opTree)
+    val taggedTree = new RefTagPass(scope = Scope.empty).run(opTree)
     val fullTree = (new EnclClassPass).run(taggedTree)
 
     val compRes = (new CompilerPass).run(fullTree)
     val classDefs = compRes._1
-    val mainObjectName = encodeClassName("Test") + "$"
+    val className = if (pkgName.isEmpty) "Test" else pkgName + ".Test"
+    val mainObjectName = encodeClassName(className) + "$"
 
     val linked = Linker.link(classDefs, NullLogger)
 
@@ -333,5 +340,79 @@ class SimpleRunTest {
         |  return x + y + z + w;
         |}
       """.stripMargin)
+  }
+
+  @Test def runStaticFieldAccess(): Unit = {
+    assertRun("42",
+      """
+        |Test.x = 42;
+        |System.out.println(Test.x);
+      """.stripMargin,
+      """
+        |static int x;
+      """.stripMargin)
+  }
+
+  @Test def runPackageName(): Unit = {
+    assertRun("42",
+      """
+        |test.Test.x = 42;
+        |System.out.println(test.Test.x);
+      """.stripMargin,
+      """
+        |static int x;
+      """.stripMargin,
+      pkgName="test")
+
+    assertRun("42",
+      """
+        |test.Test.foo();
+      """.stripMargin,
+      """
+        |static void foo() {
+        |  System.out.println(42);
+        |}
+      """.stripMargin,
+      pkgName="test")
+
+    assertRun("42",
+      """
+        |Test t = new Test();
+        |t.foo();
+      """.stripMargin,
+      """
+        |void foo() { System.out.println(42); }
+      """.stripMargin,
+      pkgName="test")
+
+    assertRun("42",
+      """
+        |Test t = new test.Test();
+        |t.foo();
+      """.stripMargin,
+      """
+        |void foo() { System.out.println(42); }
+      """.stripMargin,
+      pkgName="test")
+
+    assertRun("42",
+      """
+        |test.Test t = new Test();
+        |t.foo();
+      """.stripMargin,
+      """
+        |void foo() { System.out.println(42); }
+      """.stripMargin,
+      pkgName="test")
+
+    assertRun("42",
+      """
+        |test.Test t = new test.Test();
+        |t.foo();
+      """.stripMargin,
+      """
+        |void foo() { System.out.println(42); }
+      """.stripMargin,
+      pkgName="test")
   }
 }

@@ -10,8 +10,10 @@ import com.sun.tools.javac.util.Options;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.List;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Queue;
 import javax.tools.JavaFileObject;
@@ -20,6 +22,7 @@ import javax.tools.StandardJavaFileManager;
 public class CompilerInterface {
 
     public JCCompilationUnit compilationUnit;
+    public ArrayList<JCCompilationUnit> compilationUnits;
     private Context context;
     private Options options;
     private StandardJavaFileManager javaFileManager;
@@ -51,7 +54,7 @@ public class CompilerInterface {
     /** Compile a file from disk */
     public void compile(String filename) {
         JavaFileObject jfo = new SourceObject(filename);
-        ArrayList<JavaFileObject> jfObjects = new ArrayList<JavaFileObject>();
+        ArrayList<JavaFileObject> jfObjects = new ArrayList<>();
         jfObjects.add(jfo);
 
         List<JCCompilationUnit> compilationUnits =
@@ -68,7 +71,7 @@ public class CompilerInterface {
     /** Compile source string */
     public void compile(String name, String source) {
         JavaFileObject jfo = new SourceObject(name, source);
-        ArrayList<JavaFileObject> jfObjects = new ArrayList<JavaFileObject>();
+        ArrayList<JavaFileObject> jfObjects = new ArrayList<>();
         jfObjects.add(jfo);
 
         List<JCCompilationUnit> compilationUnits =
@@ -76,6 +79,58 @@ public class CompilerInterface {
 
         this.attrs = compiler.attribute(compiler.todo);
         this.compilationUnit = compilationUnits.head;
+    }
+
+    private static ArrayList<JavaFileObject> findSources(File path){
+        ArrayList<JavaFileObject> sources = new ArrayList<>();
+
+        if (path.isDirectory()) {
+            String[] children = path.list();
+            for (int i = 0; children != null && i < children.length; i++) {
+                sources.addAll(findSources(new File(path, children[i])));
+            }
+        } else if (path.isFile()) {
+            if (path.getName().endsWith(".java")) {
+                System.out.println(path.getName());
+                JavaFileObject jfo = new SourceObject(path.getAbsolutePath());
+                sources.add(jfo);
+            }
+        }
+
+        return sources;
+    }
+
+    public void compileProject(String rootDir) throws Exception {
+        File srcDir = new File(rootDir, "src");
+        if (!srcDir.exists())
+            throw new Exception("[CompilerInteraface -- compileProject]" +
+                    "unable to find the 'src' directory in project root");
+
+        ArrayList<JavaFileObject> sources = findSources(srcDir);
+
+        List<JCCompilationUnit> compilationUnits =
+                compiler.enterTrees(compiler.parseFiles(sources));
+
+        this.attrs = compiler.attribute(compiler.todo);
+        this.compilationUnits = new ArrayList<>(compilationUnits.size());
+        compilationUnits.iterator().forEachRemaining(cu -> this.compilationUnits.add(cu));
+    }
+
+    public void compileVirtualProject(java.util.List<String> classNames,
+                                      java.util.List<String> sources) {
+        int N = classNames.size();
+        ArrayList<JavaFileObject> sourceObjects = new ArrayList<>(N);
+        for (int i = 0; i < N; ++i) {
+            sourceObjects.add(i, new SourceObject(classNames.get(i),
+                    sources.get(i)));
+        }
+
+        List<JCCompilationUnit> compilationUnits =
+                compiler.enterTrees(compiler.parseFiles(sourceObjects));
+
+        this.attrs = compiler.attribute(compiler.todo);
+        this.compilationUnits = new ArrayList<>(compilationUnits.size());
+        compilationUnits.iterator().forEachRemaining(cu -> this.compilationUnits.add(cu));
     }
 
     public void printEnvs() {
