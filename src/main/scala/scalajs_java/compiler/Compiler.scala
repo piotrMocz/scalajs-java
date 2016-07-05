@@ -483,15 +483,14 @@ class Compiler(val errorHanlder: ErrorHandler) {
 
         methodSel match {
           case fa@FieldAccess(name, sym, selected, _) =>
-            val _classType = typeCompiler.compileType(selected.tp)
-            val classType =
-              if (isStatic) irtpe.ClassType(_classType.show() + "$")
-              else _classType
+            val classType = typeCompiler.compileType(selected.tp)
             val tpC = typeCompiler.compileType(tp)
             val argsC = args.map(compileTree)
             val qualifier =
-              if (Predicates.isThisSelect(fa) | isStatic) {
+              if (Predicates.isThisSelect(fa)) {
                 irt.This()(classType)
+              } else if (isStatic) {
+                  irt.LoadModule(irtpe.ClassType(classType.show() + "$"))
               } else {
                 val ident = compileSelectIdent(selected)
                 irt.VarRef(ident)(classType)
