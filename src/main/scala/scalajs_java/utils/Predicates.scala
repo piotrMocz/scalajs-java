@@ -57,6 +57,9 @@ object Predicates {
     case member: Block =>
       member.isStatic
 
+    case fa: FieldAccess =>
+      fa.symbol.isStatic
+
     case _ =>
       false
   }

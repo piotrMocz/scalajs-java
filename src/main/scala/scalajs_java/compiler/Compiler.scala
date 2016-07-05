@@ -145,8 +145,9 @@ class Compiler(val errorHanlder: ErrorHandler) {
       irtpe.zeroOf(tpe))
 
     // TODO what is the name expression?
+    // TODO handle init
 
-    irt.FieldDef(name, tpe, mutable = false)
+    irt.FieldDef(name, tpe, mutable = true)
   }
 
   def compileExtendsClause(extendsCl: Option[Expr])(
@@ -272,7 +273,7 @@ class Compiler(val errorHanlder: ErrorHandler) {
     expr match {
       case Ident(sym, _, _, _, _) =>
         if (sym.isLocal) Mangler.encodeLocalSym(sym)
-        else Mangler.encodeFieldSym(sym.asInstanceOf[VarSymbol]) // TODO
+        else Mangler.encodeFieldSym(sym) // TODO
 
       case _ =>
         errorHanlder.fail(pos.line, Some("compileSelectIdent"),
@@ -283,12 +284,15 @@ class Compiler(val errorHanlder: ErrorHandler) {
 
   def compileFieldAccess(fieldAcc: FieldAccess): irt.Select = {
     implicit val pos = getPosition(fieldAcc)
+
     val item = Mangler.encodeFieldSym(fieldAcc.symbol)
     val classType = typeCompiler.compileType(fieldAcc.selected.tp)
     val tpe = typeCompiler.compileType(fieldAcc.tp)
     val qualifier =
-    if (Predicates.isThisSelect(fieldAcc)) {
+      if (Predicates.isThisSelect(fieldAcc)) {
         irt.This()(classType)
+      } else if (Predicates.isStatic(fieldAcc)) {
+        irt.LoadModule(irtpe.ClassType(classType.show() + "$"))
       } else {
         val ident = compileSelectIdent(fieldAcc.selected)
         irt.VarRef(ident)(classType)
