@@ -345,6 +345,33 @@ class SimpleRunTest {
   @Test def runStaticFieldAccess(): Unit = {
     assertRun("42",
       """
+        |x = 42;
+        |System.out.println(x);
+      """.stripMargin,
+      """
+        |static int x;
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test.x = 42;
+        |System.out.println(x);
+      """.stripMargin,
+      """
+        |static int x;
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |x = 42;
+        |System.out.println(Test.x);
+      """.stripMargin,
+      """
+        |static int x;
+      """.stripMargin)
+
+    assertRun("42",
+      """
         |Test.x = 42;
         |System.out.println(Test.x);
       """.stripMargin,

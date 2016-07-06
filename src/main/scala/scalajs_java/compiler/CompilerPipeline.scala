@@ -1,5 +1,7 @@
 package scalajs_java.compiler
 
+import scala.language.postfixOps
+
 import com.sun.tools.javac.tree.JCTree.JCCompilationUnit
 import org.scalajs.core.ir.Trees
 import org.scalajs.core.tools.logging.{NullLogger, ScalaConsoleLogger}

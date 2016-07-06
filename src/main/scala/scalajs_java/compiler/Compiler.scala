@@ -11,13 +11,7 @@ import scalajs_java.trees._
 import scalajs_java.utils._
 
 
-/** Main compiler.
-  *
-  * TODO account for a case like this:
-  * static int x;
-  * static int foo() { return x; }
-  * (referring to a static field without the class name)
-  */
+/** Main compiler. */
 class Compiler(val errorHanlder: ErrorHandler) {
   var MainObjectFullName: Option[String] = None
 
@@ -305,25 +299,37 @@ class Compiler(val errorHanlder: ErrorHandler) {
     irt.Select(qualifier, item)(tpe)
   }
 
-  def compileIdent(ident: Ident): irt.VarRef = {
+  def compileStaticAccess(ident: Ident, varDecl: VarDecl): irt.Tree = {
+    implicit val pos = getPosition(ident)
+
+    val item = Mangler.encodeFieldSym(ident.symbol)
+    val classType = irtpe.ClassType(encodeClassName(ident.enclClass.get) + "$")
+    val tpe = typeCompiler.compileType(ident.tp)
+    val qualifier = irt.This()(classType)
+
+    irt.Select(qualifier, item)(tpe)
+  }
+
+  def compileIdent(ident: Ident): irt.Tree = {
     implicit val pos = getPosition(ident)
     val sym = ident.symbol
     val tpe = typeCompiler.compileType(ident.tp)
-    val name = ident.refVar match {
-      case Some(VarInfo(_, _, ClassMember)) =>
-        Mangler.encodeFieldSym(sym)
+    ident.refVar match {
+      case Some(VarInfo(_, vd, ClassMember)) if Predicates.isStatic(vd) =>
+        compileStaticAccess(ident, vd)
 
       case Some(VarInfo(_, _, LocalVar)) =>
-        Mangler.encodeLocalSym(sym)
+        val name = Mangler.encodeLocalSym(sym)
+        irt.VarRef(name)(tpe)
 
       case Some(VarInfo(_, _, Param)) =>
-        Mangler.encodeParamIdent(sym)
+        val name = Mangler.encodeParamIdent(sym)
+        irt.VarRef(name)(tpe)
 
       case _ =>
-        irt.Ident(ident.name)
+        val name = irt.Ident(ident.name)
+        irt.VarRef(name)(tpe)
     }
-
-    irt.VarRef(name)(tpe)
   }
 
   // Compiling higher-level nodes
