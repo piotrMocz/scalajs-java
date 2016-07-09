@@ -11,8 +11,8 @@ object Definitions {
 
   /** This is the default (no-arg) constructor for a companion object
     * that we have to include. */
-  def defaultConstructor(classIdent: irt.Ident, classType: irtpe.ClassType)(
-    implicit pos: Position): irt.MethodDef = {
+  def defaultConstructor(classIdent: irt.Ident, classType: irtpe.ClassType,
+      statements: List[irt.Tree])(implicit pos: Position): irt.MethodDef = {
 
     val constrIdent = irt.Ident("init___", Some("<init>__"))
 
@@ -22,9 +22,11 @@ object Definitions {
 
     val storeModule = irt.StoreModule(classType, irt.This()(classType))
 
+    val allStatements = superCall :: storeModule :: statements
+
     irt.MethodDef(
       static = false, constrIdent, Nil, irtpe.NoType,
-      irt.Block(superCall, storeModule)
+      irt.Block(allStatements)
     )(irt.OptimizerHints.empty, None)
   }
 
@@ -72,6 +74,14 @@ object Definitions {
     irt.MethodDef(static = false,
       irt.StringLiteral("main"), Nil, irtpe.AnyType, body)(
       irt.OptimizerHints.empty, None)
+  }
+
+  def staticAssignment(classType: irtpe.ClassType, field: irt.Ident,
+      expr: irt.Tree)(implicit pos: Position): irt.Tree = {
+    val module = irt.This()(classType)
+    val select = irt.Select(module, field)(expr.tpe)
+
+    irt.Assign(select, expr)
   }
 
 }

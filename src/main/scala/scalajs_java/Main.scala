@@ -38,28 +38,28 @@ object Main {
 
   }
 
-  private def compileAndRun(compilationUnit: CompilationUnit): Unit = {
-    val compRes = (new CompilerPass).run(compilationUnit)
-    val defs = compRes._1
-    val mainObjectName = compRes._2.get
-
-    val writer = new java.io.PrintWriter(System.out)
-    try {
-      val printer = new IRTreePrinter(writer)
-      defs foreach { d =>
-        printer.printTopLevelTree(d)
-      }
-    } finally {
-      writer.flush()
-    }
-
-    val linked = Linker.link(defs, new ScalaConsoleLogger)
-
-    // Clearly separate the output of the program from the compiling logs
-    println("")
-    println("")
-
-    Runner.run(mainObjectName, linked, NullLogger, ConsoleJSConsole)
-  }
+//  private def compileAndRun(compilationUnit: CompilationUnit): Unit = {
+//    val compRes = (new CompilerPass).run(compilationUnit)
+//    val defs = compRes._1
+//    val mainObjectName = compRes._2.get
+//
+//    val writer = new java.io.PrintWriter(System.out)
+//    try {
+//      val printer = new IRTreePrinter(writer)
+//      defs foreach { d =>
+//        printer.printTopLevelTree(d)
+//      }
+//    } finally {
+//      writer.flush()
+//    }
+//
+//    val linked = Linker.link(defs, new ScalaConsoleLogger)
+//
+//    // Clearly separate the output of the program from the compiling logs
+//    println("")
+//    println("")
+//
+//    Runner.run(mainObjectName, linked, NullLogger, ConsoleJSConsole)
+//  }
 
 }

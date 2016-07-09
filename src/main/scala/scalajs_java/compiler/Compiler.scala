@@ -12,7 +12,7 @@ import scalajs_java.utils._
 
 
 /** Main compiler. */
-class Compiler(val errorHanlder: ErrorHandler) {
+class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
   var MainObjectFullName: Option[String] = None
 
   private final def objectClassIdent(implicit pos: Position) =
@@ -29,6 +29,8 @@ class Compiler(val errorHanlder: ErrorHandler) {
   val opCompiler = new OpCompiler(errorHanlder)
 
   val typeCompiler = new TypeCompiler(errorHanlder)
+
+  val compiledInits = inits.mapValues(compileExpr)
   
 
   // Compiling constructors
@@ -137,13 +139,9 @@ class Compiler(val errorHanlder: ErrorHandler) {
     implicit val pos = getPosition(varDecl)
     val name = Mangler.encodeFieldSym(varDecl.symbol)
     val tpe = typeCompiler.compileType(varDecl.varType)
-    val init = varDecl.init.map(compileExpr)
-    val modifiers = varDecl.mods
-    val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
-      irtpe.zeroOf(tpe))
-
-    // TODO what is the name expression?
-    // TODO handle init
+//    val modifiers = varDecl.mods
+//    val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
+//      irtpe.zeroOf(tpe))
 
     irt.FieldDef(name, tpe, mutable = true)
   }
@@ -174,6 +172,18 @@ class Compiler(val errorHanlder: ErrorHandler) {
       compileTree(member)
   }
 
+  def compileStaticFieldInitializer(varDecl: VarDecl,
+        classType: irtpe.ClassType): irt.Tree = {
+    implicit val pos = getPosition(varDecl)
+
+    val name = Mangler.encodeFieldSym(varDecl.symbol)
+    val tpe = typeCompiler.compileType(varDecl.varType)
+    val init = inits.get(varDecl.name.str).map(compileExpr)
+    val fieldDef = irt.FieldDef(name, tpe, mutable = true)
+
+    Definitions.staticAssignment(classType, name, init.get)
+  }
+
   /** Creates a companion object containing
     * all the static methods of `classDecl`. Instead of putting it inside the
     * compiled ast, we store it in a list and join it later. */
@@ -188,9 +198,12 @@ class Compiler(val errorHanlder: ErrorHandler) {
     val superClassIdent = objectClassIdent
     val superClassType = objectClassType
 
-    val memberDefs = classDecl.members.filter(Predicates.isStatic)
-        .map(compileMember(classIdent, classType, superClassType, _))
-    val consDef = Definitions.defaultConstructor(classIdent, classType)
+    val members = classDecl.members.filter(Predicates.isStatic)
+    val memberDefs = members.map(
+      compileMember(classIdent, classType, superClassType, _))
+    val fields = members.collect { case vd: VarDecl => vd }
+    val initializers = fields.map(compileStaticFieldInitializer(_, classType))
+    val consDef = Definitions.defaultConstructor(classIdent, classType, initializers)
 
     val mainDefs =
       if (Predicates.isMainClass(classDecl)) {

@@ -44,8 +44,14 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
       new EnclClassPass(verbose).run(tt)
     }
 
-    val irs = fullTrees.map { ft =>
-      new CompilerPass(verbose).run(ft)
+    val initLists = fullTrees.map { ft =>
+      val sip = new StaticInitsPass(verbose)
+      sip.run(ft)
+      sip.inits
+    }
+
+    val irs = (fullTrees zip initLists).map { ft =>
+      new CompilerPass(ft._2, verbose).run(ft._1)
     }
 
     val defsObjNames = irs.unzip
