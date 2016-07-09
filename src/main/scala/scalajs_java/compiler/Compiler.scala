@@ -173,7 +173,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
   }
 
   def compileStaticFieldInitializer(varDecl: VarDecl,
-        classType: irtpe.ClassType): irt.Tree = {
+        classType: irtpe.ClassType): Option[irt.Tree] = {
     implicit val pos = getPosition(varDecl)
 
     val name = Mangler.encodeFieldSym(varDecl.symbol)
@@ -181,7 +181,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
     val init = inits.get(varDecl.name.str).map(compileExpr)
     val fieldDef = irt.FieldDef(name, tpe, mutable = true)
 
-    Definitions.staticAssignment(classType, name, init.get)
+    init.map(Definitions.staticAssignment(classType, name, _))
   }
 
   /** Creates a companion object containing
@@ -201,8 +201,12 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
     val members = classDecl.members.filter(Predicates.isStatic)
     val memberDefs = members.map(
       compileMember(classIdent, classType, superClassType, _))
+
     val fields = members.collect { case vd: VarDecl => vd }
-    val initializers = fields.map(compileStaticFieldInitializer(_, classType))
+    val initializers = fields
+        .map(compileStaticFieldInitializer(_, classType))
+        .collect { case Some(i) => i }
+
     val consDef = Definitions.defaultConstructor(classIdent, classType, initializers)
 
     val mainDefs =
