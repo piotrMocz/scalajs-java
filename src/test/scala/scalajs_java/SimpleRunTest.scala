@@ -48,8 +48,10 @@ class SimpleRunTest {
     val opTree = (new OpTraversePass).run(tree)
     val taggedTree = new RefTagPass(scope = Scope.empty).run(opTree)
     val fullTree = (new EnclClassPass).run(taggedTree)
+    val sip = new StaticInitsPass
+    sip.run(fullTree)
 
-    val compRes = (new CompilerPass).run(fullTree)
+    val compRes = new CompilerPass(sip.inits).run(fullTree)
     val classDefs = compRes._1
     val className = if (pkgName.isEmpty) "Test" else pkgName + ".Test"
     val mainObjectName = encodeClassName(className) + "$"
@@ -345,6 +347,33 @@ class SimpleRunTest {
   @Test def runStaticFieldAccess(): Unit = {
     assertRun("42",
       """
+        |x = 42;
+        |System.out.println(x);
+      """.stripMargin,
+      """
+        |static int x;
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test.x = 42;
+        |System.out.println(x);
+      """.stripMargin,
+      """
+        |static int x;
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |x = 42;
+        |System.out.println(Test.x);
+      """.stripMargin,
+      """
+        |static int x;
+      """.stripMargin)
+
+    assertRun("42",
+      """
         |Test.x = 42;
         |System.out.println(Test.x);
       """.stripMargin,
@@ -414,5 +443,135 @@ class SimpleRunTest {
         |void foo() { System.out.println(42); }
       """.stripMargin,
       pkgName="test")
+  }
+
+  @Test def runShadowing(): Unit = {
+    assertRun("42",
+      """
+        |Test.x = 24;
+        |System.out.println(foo(42));
+      """.stripMargin,
+      """
+        |static int x;
+        |
+        |static int foo(int x) {
+        |  return x;
+        |}
+      """.stripMargin)
+
+    assertRun("24",
+      """
+        |Test.x = 24;
+        |System.out.println(foo(42));
+      """.stripMargin,
+      """
+        |static int x;
+        |
+        |static int foo(int x) {
+        |  return Test.x;
+        |}
+      """.stripMargin)
+
+    assertRun("66",
+      """
+        |Test.x = 24;
+        |System.out.println(foo(42));
+      """.stripMargin,
+      """
+        |static int x;
+        |
+        |static int foo(int x) {
+        |  return Test.x + x;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test = new Test();
+        |test.x = 24;
+        |System.out.println(test.foo(42));
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |int foo(int x) {
+        |  return x;
+        |}
+      """.stripMargin)
+
+    assertRun("24",
+      """
+        |Test test = new Test();
+        |test.x = 24;
+        |System.out.println(test.foo(42));
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |int foo(int x) {
+        |  return this.x;
+        |}
+      """.stripMargin)
+
+    assertRun("66",
+      """
+        |Test test = new Test();
+        |test.x = 24;
+        |System.out.println(test.foo(42));
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |int foo(int x) {
+        |  return this.x + x;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test.x = 24;
+        |System.out.println(foo());
+      """.stripMargin,
+      """
+        |static int x;
+        |
+        |static int foo() {
+        |  int x = 42;
+        |  return x;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test = new Test();
+        |test.x = 24;
+        |System.out.println(test.foo());
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |int foo() {
+        |  int x = 42;
+        |  return x;
+        |}
+      """.stripMargin)
+  }
+
+  @Test def runStaticFieldInit(): Unit = {
+    assertRun("42",
+      """
+        |System.out.println(x);
+      """.stripMargin,
+      """
+        |static int x = 42;
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |System.out.println(Test.x);
+      """.stripMargin,
+      """
+        |static int x = 42;
+      """.stripMargin)
   }
 }

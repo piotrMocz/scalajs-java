@@ -244,4 +244,39 @@ class MultifileRunTest {
           """.stripMargin)))
   }
 
+  @Test def runShadowing(): Unit = {
+    assertRun("42",
+      """
+        |Test2.x = 13;
+        |Test3.x = 24;
+        |int x = 42;
+        |System.out.println(x);
+      """.stripMargin,
+      List(
+        ("Test2",
+          """
+            |static int x;
+          """.stripMargin),
+        ("Test3",
+          """
+            |static int x;
+          """.stripMargin)))
+
+    assertRun("79",
+      """
+        |Test2.x = 13;
+        |Test3.x = 24;
+        |int x = 42;
+        |System.out.println(x + Test2.x + Test3.x);
+      """.stripMargin,
+      List(
+        ("Test2",
+          """
+            |static int x;
+          """.stripMargin),
+        ("Test3",
+          """
+            |static int x;
+          """.stripMargin)))
   }
+}
