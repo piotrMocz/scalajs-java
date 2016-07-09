@@ -6,7 +6,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     val compiler = new CompilerPipeline
-    compiler.run("testproject")
+    compiler.run(Config.testProjectPath)
   }
 
 }

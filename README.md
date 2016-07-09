@@ -8,28 +8,27 @@ To compile Java programs and transform the trees you only need scala and sbt. To
 
     > sbt test 
 
-to run all the tests. To compile a Java file, modify the file `Test.java` (in the project root). The file will be compiled and the ouput printed (along with a lot of diagnostic/debug info) after running:
-
+to run all the tests. Please see the `testproject` directory in the project root for an example of how to compile a whole project. Right now the path to the project is defined by the `testProjectPath` in the `Config.scala` file. After you set it to your project path (or keep its original value to use the project provided by the repo), run:
+    
     > sbt run
-
-You can change the path to the file that gets compiled; for now it is hard-coded in the `scalajs_java.Config` file but that will be subject to change as the compiler gets more sophisticated.
+     
+Choosing the `Main` class to run (sbt sees our test Java project as a runnable source as well, so you need to specify which one to run).
 
 ### Project status
 Right now we can compile:
 * simple classes
-* fields
-* static fields
+* fields (declaration and access)
+* static fields with initializers
 * local variables
 * primitive types + `String` type
 * method declarations
 * for loops
-* while loops
+* while and do-while loops
 * assignments (returning a value)
 * assign-ops (e.g. `x += 10`)
 * incrementation, decrementation (both pre- and post-)
 * `println` method invocation (useful for debugging and testing)
 * object creation with `new`
-* field access
 * method invocation in general (although `println` is the only supported library method right now)
 * static method invocation
-* using multiple files in a project/compiling projects (this has limitation for now)
+* using multiple files in a project/compiling projects (this has limitations for now)

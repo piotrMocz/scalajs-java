@@ -6,5 +6,6 @@ package scalajs_java
   */
 object Config {
   val testFilePath: String = "Test.java"
+  val testProjectPath: String = "testproject"
   val verbose: Boolean = true
 }
