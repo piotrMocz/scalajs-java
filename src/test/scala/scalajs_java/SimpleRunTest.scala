@@ -442,4 +442,116 @@ class SimpleRunTest {
       """.stripMargin,
       pkgName="test")
   }
+
+  @Test def runShadowing(): Unit = {
+    assertRun("42",
+      """
+        |Test.x = 24;
+        |System.out.println(foo(42));
+      """.stripMargin,
+      """
+        |static int x;
+        |
+        |static int foo(int x) {
+        |  return x;
+        |}
+      """.stripMargin)
+
+    assertRun("24",
+      """
+        |Test.x = 24;
+        |System.out.println(foo(42));
+      """.stripMargin,
+      """
+        |static int x;
+        |
+        |static int foo(int x) {
+        |  return Test.x;
+        |}
+      """.stripMargin)
+
+    assertRun("66",
+      """
+        |Test.x = 24;
+        |System.out.println(foo(42));
+      """.stripMargin,
+      """
+        |static int x;
+        |
+        |static int foo(int x) {
+        |  return Test.x + x;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test = new Test();
+        |test.x = 24;
+        |System.out.println(test.foo(42));
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |int foo(int x) {
+        |  return x;
+        |}
+      """.stripMargin)
+
+    assertRun("24",
+      """
+        |Test test = new Test();
+        |test.x = 24;
+        |System.out.println(test.foo(42));
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |int foo(int x) {
+        |  return this.x;
+        |}
+      """.stripMargin)
+
+    assertRun("66",
+      """
+        |Test test = new Test();
+        |test.x = 24;
+        |System.out.println(test.foo(42));
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |int foo(int x) {
+        |  return this.x + x;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test.x = 24;
+        |System.out.println(foo());
+      """.stripMargin,
+      """
+        |static int x;
+        |
+        |static int foo() {
+        |  int x = 42;
+        |  return x;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test = new Test();
+        |test.x = 24;
+        |System.out.println(test.foo());
+      """.stripMargin,
+      """
+        |int x;
+        |
+        |int foo() {
+        |  int x = 42;
+        |  return x;
+        |}
+      """.stripMargin)
+  }
 }
