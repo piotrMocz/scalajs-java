@@ -4,7 +4,6 @@ import com.sun.source.tree.LambdaExpressionTree.BodyKind
 import com.sun.source.tree.MemberReferenceTree
 import com.sun.tools.javac.code.TypeTag
 import com.sun.tools.javac.tree.JCTree
-import org.scalajs.core.ir.Trees
 
 import scala.collection.JavaConversions._
 import scalajs_java.trees._

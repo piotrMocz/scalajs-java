@@ -1,6 +1,5 @@
 package scalajs_java.traversals
 
-import com.sun.tools.javac.code.Symbol.TypeSymbol
 import com.sun.tools.javac.code.Type.JCPrimitiveType
 import com.sun.tools.javac.code.TypeTag
 import com.sun.tools.javac.tree.JCTree.Tag
@@ -41,7 +40,7 @@ class OperationsTraverse(val errorHanlder: ErrorHandler) extends Traverse {
     implicit val pos = forLoop.pos
 
     val cond = forLoop.cond.getOrElse(
-      BooleanLiteral(true, JExprType(new JCPrimitiveType(TypeTag.BOOLEAN, null))))
+      BooleanLiteral(value = true, JExprType(new JCPrimitiveType(TypeTag.BOOLEAN, null))))
     val body = Block(traverse(forLoop.body) :: forLoop.update, isStatic = false)
     val loop = WhileLoop(cond, body)
 

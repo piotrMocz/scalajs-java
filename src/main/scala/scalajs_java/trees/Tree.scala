@@ -1,15 +1,14 @@
 package scalajs_java.trees
 
-import scala.language.implicitConversions
-import com.sun.tools.javac.code.{Symbol, TypeTag, Type => JType}
-import com.sun.tools.javac.util.{Name => JName}
-import javax.lang.model.element.Modifier
 import javax.lang.model.`type`.TypeKind
+import javax.lang.model.element.Modifier
 
 import com.sun.tools.javac.code.Symbol.{ClassSymbol, MethodSymbol, VarSymbol}
+import com.sun.tools.javac.code.{Symbol, TypeTag}
 import com.sun.tools.javac.tree.JCTree.Tag
-import sun.reflect.generics.scope.ClassScope
+import com.sun.tools.javac.util.{Name => JName}
 
+import scala.language.implicitConversions
 import scalajs_java.utils.ScopeElem
 
 

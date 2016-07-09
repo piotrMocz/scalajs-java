@@ -6,18 +6,13 @@ package scalajs_java
  * by @sjrd
  */
 
-import org.junit.Test
 import org.junit.Assert._
-import org.scalajs.core.ir
-import ir.{Trees => irt, Types => irtpe}
-import ir.Definitions._
-import org.scalajs.core.ir.Printers.IRTreePrinter
+import org.junit.Test
+import org.scalajs.core.ir.Definitions._
 import org.scalajs.core.tools.logging._
 import org.scalajs.jsenv.JSConsole
 
-import scalajs_java.compiler.Compiler
 import scalajs_java.compiler.passes._
-import scalajs_java.traversals.{EnclClassTraverse, JTreeTraverse, OperationsTraverse, RefTraverse}
 import scalajs_java.utils.Scope
 
 /** Blackbox tests */

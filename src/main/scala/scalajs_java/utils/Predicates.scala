@@ -2,7 +2,7 @@ package scalajs_java.utils
 
 import javax.lang.model.element.Modifier
 
-import scalajs_java.trees.{Block, JExprType, Type, _}
+import scalajs_java.trees._
 
 /** Contains a set of methods for checking whether a given AST node
   * is a main method, constructor, etc.

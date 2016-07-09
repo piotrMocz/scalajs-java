@@ -2,8 +2,6 @@ package scalajs_java.utils
 
 import scala.collection.mutable.{MutableList => MList}
 
-import scalajs_java.trees.Position
-
 /* Errors thrown by the compiler
  * We would like to fail as late as possible, giving
  * the user as many errors as we can spot.
@@ -47,7 +45,7 @@ class CompilerError(val line: Int,
   override def formatError(phase: CompilerPhase): String = {
     val mName = methodName.map("in method " + _)
     s"""
-       | ${severity.toString} during ${phase.toString} ${methodName.getOrElse("")}
+       | ${severity.toString} during ${phase.toString} ${mName.getOrElse("")}
        | (line: $line)
        | $message
      """.stripMargin

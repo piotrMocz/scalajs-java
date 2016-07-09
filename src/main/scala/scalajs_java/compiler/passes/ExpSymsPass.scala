@@ -1,9 +1,9 @@
 package scalajs_java.compiler.passes
 import scala.collection.mutable.{Map => MMap}
 import scalajs_java.traversals.ExportedSymbolsTraverse
-import scalajs_java.trees.{CompilationUnit, Tree}
-import scalajs_java.utils.{CompilerPhase, ErrorHandler, Scope, ScopeElem}
+import scalajs_java.trees.CompilationUnit
 import scalajs_java.utils.Scope.ScopeT
+import scalajs_java.utils.{CompilerPhase, ErrorHandler}
 
 
 class ExpSymsPass(verb: Boolean)

@@ -13,14 +13,10 @@ package scalajs_java.utils
 
 import javax.lang.model.`type`.TypeKind
 
-import scala.collection.mutable.{Map => MMap, Set => MSet}
-import scala.collection.JavaConversions._
-import javax.lang.model.element.Modifier
-
-import com.sun.tools.javac.code.Symbol.{MethodSymbol, TypeSymbol, VarSymbol}
 import com.sun.tools.javac.code.{Symbol, TypeTag, Type => JType}
-import org.scalajs.core.ir.Definitions
-import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
+import org.scalajs.core.ir.{Definitions, Position, Trees => irt, Types => irtpe}
+
+import scala.collection.mutable.{Map => MMap, Set => MSet}
 import scalajs_java.trees._
 
 /*

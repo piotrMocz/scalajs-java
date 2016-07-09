@@ -1,7 +1,7 @@
 package scalajs_java.traversals
 
-import scalajs_java.trees.{EnhancedForLoop, FieldAccess, Ident, MethodInv, _}
-import scalajs_java.utils.{ClassScope, ErrorHandler, Scope}
+import scalajs_java.trees.{Ident, ClassDecl}
+import scalajs_java.utils.{ClassScope, ErrorHandler}
 
 /** Traverses the tree constructing the scope and tagging
   * `Ident` nodes with the tree nodes they reference. */

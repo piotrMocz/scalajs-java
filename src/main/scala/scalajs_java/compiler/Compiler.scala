@@ -30,9 +30,6 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
 
   val typeCompiler = new TypeCompiler(errorHanlder)
 
-  val compiledInits = inits.mapValues(compileExpr)
-  
-
   // Compiling constructors
 
   /** Compiles statement of a constructor body
@@ -276,9 +273,9 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
 
     val tpe = typeCompiler.compileType(varDecl.varType)
     val init = varDecl.init.map(compileExpr).getOrElse(irtpe.zeroOf(tpe))
-    val modifiers = varDecl.mods
-    val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
-      irtpe.zeroOf(tpe))
+//    val modifiers = varDecl.mods
+//    val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
+//      irtpe.zeroOf(tpe))
 
     irt.VarDef(name, tpe, mutable = true, init)
   }

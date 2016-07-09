@@ -1,12 +1,9 @@
 package scalajs_java
 
 import org.scalajs.core.ir
-import ir.Printers._
-import org.scalajs.core.ir.Infos.ClassInfo
-import org.scalajs.core.ir.Trees.ClassDef
-import org.scalajs.core.tools.logging._
 import org.scalajs.core.tools.io._
 import org.scalajs.core.tools.linker.{Linker => ScalaJSLinker, _}
+import org.scalajs.core.tools.logging._
 
 /**
   * The code is from:

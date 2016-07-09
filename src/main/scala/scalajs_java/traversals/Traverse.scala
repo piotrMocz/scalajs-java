@@ -1,6 +1,7 @@
 package scalajs_java.traversals
 
 import scalajs_java.trees._
+
 /** Generic traversal of a `Tree`.
   *
   * To create a specific traversal just extend this trait and override
