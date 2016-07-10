@@ -22,7 +22,7 @@ import scalajs_java.trees._
 /*
  * Name mangling
  */
-object Mangler {
+class Mangler {
 
 //  private val usedLocalNames: MSet[String] = MSet.empty[String]
 

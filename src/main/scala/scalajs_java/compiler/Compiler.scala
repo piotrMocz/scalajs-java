@@ -28,7 +28,9 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
   
   val opCompiler = new OpCompiler(errorHanlder)
 
-  val typeCompiler = new TypeCompiler(errorHanlder)
+  val mangler = new Mangler
+
+  val typeCompiler = new TypeCompiler(mangler, errorHanlder)
 
   // Compiling constructors
 
@@ -46,7 +48,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
       stmt match {
         case ExprStatement(MethodInv(_, _, args, _, _)) =>
           val argRefsC = args.map(compileParamRef)
-          val argStr = args.map(arg => Mangler.mangleType(arg.tp)).mkString("__")
+          val argStr = args.map(arg => mangler.mangleType(arg.tp)).mkString("__")
           val constrName = irt.Ident("init___" + argStr)
           irt.ApplyStatically(irt.This()(classType), superClassType, constrName,
             argRefsC)(irtpe.NoType)
@@ -70,7 +72,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
       superClassType: irtpe.ClassType, methodDecl: MethodDecl): irt.MethodDef = {
     implicit val pos = getPosition(methodDecl)
 
-    val constrName = Mangler.encodeMethod(methodDecl)
+    val constrName = mangler.encodeMethod(methodDecl)
     // helper func to capture the names:
     val compConsStmt = (stmt: Statement) =>
       compileConstructorStmt(className, classType, superClassType, stmt)
@@ -92,7 +94,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
 
   def compileParam(param: VarDecl): irt.ParamDef = {
     implicit val pos = getPosition(param)
-    val name = irt.Ident(param.name)   // Mangler.encodeLocalSym(param.symbol)
+    val name = irt.Ident(param.name)   // mangler.encodeLocalSym(param.symbol)
     val ptpe = typeCompiler.compileType(param.varType)
 
     irt.ParamDef(name, ptpe, mutable = false, rest = false)
@@ -116,7 +118,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
 
   def compileMethodDecl(methodDecl: MethodDecl): irt.MethodDef = {
     implicit val pos = getPosition(methodDecl)
-    val name = Mangler.encodeMethod(methodDecl) // irt.Ident(Mangler.mangleMethodName(methodDecl))
+    val name = mangler.encodeMethod(methodDecl) // irt.Ident(mangler.mangleMethodName(methodDecl))
     val retType = methodDecl.retType.map(typeCompiler.compileType).getOrElse(irtpe.NoType)
     val params = methodDecl.params.map(compileParam)
     val body = compileTree(methodDecl.body)
@@ -134,7 +136,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
 
   def compileFieldDef(varDecl: VarDecl): irt.FieldDef = {
     implicit val pos = getPosition(varDecl)
-    val name = Mangler.encodeFieldSym(varDecl.symbol)
+    val name = mangler.encodeFieldSym(varDecl.symbol)
     val tpe = typeCompiler.compileType(varDecl.varType)
 //    val modifiers = varDecl.mods
 //    val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
@@ -146,8 +148,8 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
   def compileExtendsClause(extendsCl: Option[Expr])(
       implicit pos: Position): (irt.Ident, irtpe.ClassType) = extendsCl match {
     case  Some(Ident(sym, _, _, _, _)) =>
-      val name = Mangler.encodeClassFullNameIdent(sym)
-      val tpe = Mangler.encodeClassType(sym)
+      val name = mangler.encodeClassFullNameIdent(sym)
+      val tpe = mangler.encodeClassType(sym)
 
       (name, tpe)
 
@@ -173,7 +175,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
         classType: irtpe.ClassType): Option[irt.Tree] = {
     implicit val pos = getPosition(varDecl)
 
-    val name = Mangler.encodeFieldSym(varDecl.symbol)
+    val name = mangler.encodeFieldSym(varDecl.symbol)
     val tpe = typeCompiler.compileType(varDecl.varType)
     val init = inits.get(varDecl.name.str).map(compileExpr)
     val fieldDef = irt.FieldDef(name, tpe, mutable = true)
@@ -269,7 +271,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
 
   def compileLocalVar(varDecl: VarDecl): irt.VarDef = {
     implicit val pos = getPosition(varDecl)
-    val name = Mangler.encodeLocalSym(varDecl.symbol)
+    val name = mangler.encodeLocalSym(varDecl.symbol)
 
     val tpe = typeCompiler.compileType(varDecl.varType)
     val init = varDecl.init.map(compileExpr).getOrElse(irtpe.zeroOf(tpe))
@@ -284,8 +286,8 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
     implicit val pos = getPosition(expr)
     expr match {
       case Ident(sym, _, _, _, _) =>
-        if (sym.isLocal) Mangler.encodeLocalSym(sym)
-        else Mangler.encodeFieldSym(sym) // TODO
+        if (sym.isLocal) mangler.encodeLocalSym(sym)
+        else mangler.encodeFieldSym(sym) // TODO
 
       case _ =>
         errorHanlder.fail(pos.line, Some("compileSelectIdent"),
@@ -297,7 +299,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
   def compileFieldAccess(fieldAcc: FieldAccess): irt.Select = {
     implicit val pos = getPosition(fieldAcc)
 
-    val item = Mangler.encodeFieldSym(fieldAcc.symbol)
+    val item = mangler.encodeFieldSym(fieldAcc.symbol)
     val classType = typeCompiler.compileType(fieldAcc.selected.tp)
     val tpe = typeCompiler.compileType(fieldAcc.tp)
     val qualifier =
@@ -316,7 +318,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
   def compileStaticAccess(ident: Ident, varDecl: VarDecl): irt.Tree = {
     implicit val pos = getPosition(ident)
 
-    val item = Mangler.encodeFieldSym(ident.symbol)
+    val item = mangler.encodeFieldSym(ident.symbol)
     val classType = irtpe.ClassType(encodeClassName(ident.enclClass.get) + "$")
     val tpe = typeCompiler.compileType(ident.tp)
     val qualifier = irt.This()(classType)
@@ -333,11 +335,11 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
         compileStaticAccess(ident, vd)
 
       case Some(VarInfo(_, _, LocalVar)) =>
-        val name = Mangler.encodeLocalSym(sym)
+        val name = mangler.encodeLocalSym(sym)
         irt.VarRef(name)(tpe)
 
       case Some(VarInfo(_, _, Param)) =>
-        val name = Mangler.encodeParamIdent(sym)
+        val name = mangler.encodeParamIdent(sym)
         irt.VarRef(name)(tpe)
 
       case _ =>
@@ -390,7 +392,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
       case ArrayAccess(arrRef, indexExpr, tp) =>
         val arrRefC = compileExpr(arrRef)
         val indexExprC = compileExpr(indexExpr)
-//        val tTag = Mangler.mangledTypeName(tp)
+//        val tTag = mangler.mangledTypeName(tp)
         val tpC = typeCompiler.compileType(tp)
 
         irt.ArraySelect(arrRefC, indexExprC)(tpC)
@@ -447,7 +449,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
 
       case NewArray(_, _, dims, initializers, elemType, tp) =>
         val initializersC = initializers.map(compileExpr)
-        val typeInfo = Mangler.arrayTypeInfo(tp)
+        val typeInfo = mangler.arrayTypeInfo(tp)
         val ndims = if (dims.isEmpty) 1 else dims.length
 
         if (initializers.nonEmpty) {
@@ -484,7 +486,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
 
       case NewClass(ident, tArgs, args, clsBody, enclExpr, tp) =>
         val clsC = typeCompiler.compileClassType(ident)
-        val mangledArgs = args.map(arg => Mangler.mangleType(arg.tp)).mkString("__")
+        val mangledArgs = args.map(arg => mangler.mangleType(arg.tp)).mkString("__")
         val ctorC = irt.Ident("init___" + mangledArgs, Some("<init>__" + mangledArgs))
         val argsC = args.map(compileExpr)
 
@@ -506,7 +508,7 @@ class Compiler(val inits: Map[String, Expr], val errorHanlder: ErrorHandler) {
 
     refDecl match {
       case Some(methodInfo@MethodInfo(_, _, _)) =>
-        val methodName = Mangler.encodeMethod(methodInfo.decl)
+        val methodName = mangler.encodeMethod(methodInfo.decl)
         val isStatic = Predicates.isStatic(methodInfo.decl)
 
         methodSel match {
