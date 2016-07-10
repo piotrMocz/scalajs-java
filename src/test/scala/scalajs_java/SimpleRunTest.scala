@@ -569,4 +569,56 @@ class SimpleRunTest {
         |static int x = 42;
       """.stripMargin)
   }
+
+  @Test def runObjectTypeMethods(): Unit = {
+    assertRun("42",
+      """
+        |Test test = getTest();
+        |System.out.println(test.foo());
+      """.stripMargin,
+      """
+        |static Test getTest() {
+        |  return new Test();
+        |}
+        |
+        |int foo() {
+        |  return 42;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test = new Test();
+        |Test test2 = testId(test);
+        |System.out.println(test2.foo());
+      """.stripMargin,
+      """
+        |static Test testId(Test t) {
+        |  return t;
+        |}
+        |
+        |int foo() {
+        |  return 42;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test = new Test(21);
+        |Test test2 = modifyTest(test);
+        |System.out.println(test2.x);
+      """.stripMargin,
+      """
+        |static Test modifyTest(Test t) {
+        |  t.x *= 2;
+        |  return t;
+        |}
+        |
+        |int x;
+        |
+        |Test(int x) {
+        |  this.x = x;
+        |}
+      """.stripMargin)
+  }
 }

@@ -232,11 +232,10 @@ object Mangler {
 
   // TODO
   private def mangleObjectType(jtype: JType): String = {
-    val tname = jtype.tsym.toString
+    val tsym = jtype.tsym
     if (jtype.getTag == TypeTag.ARRAY) "A" + mangleJType(jtype.allparams().head)
-    else if (tname == "java.lang.String")  "T"
-    else throw new Exception(
-      s"[mangleObjectType] Cannot yet handle type: ${jtype.tsym.toString}")
+    else if (tsym.toString == "java.lang.String")  "T"
+    else encodeClassFullName(tsym)
   }
 
   private def mangleJType(jtype: JType): String =
