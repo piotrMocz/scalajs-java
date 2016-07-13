@@ -446,6 +446,9 @@ class JTreeTraverse(val errorHanlder: ErrorHandler) {
       case TypeTag.CLASS =>
         ClassLiteral(value.asInstanceOf[Any], tp)
 
+      case TypeTag.BOT =>
+        NullLiteral()
+
       case tt => println("================ UNKNOWN LITERAL =================\n" + tt.toString)
         null // TODO
     }

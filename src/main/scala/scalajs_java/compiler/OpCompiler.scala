@@ -5,7 +5,7 @@ import com.sun.tools.javac.tree.JCTree.Tag
 import org.scalajs.core.ir.Trees.{BinaryOp, UnaryOp}
 
 import scalajs_java.trees.{JExprType, Type}
-import scalajs_java.utils.{ErrorHandler, Normal}
+import scalajs_java.utils.{ErrorHandler, Fatal, Normal}
 
 /** Compiles/translates the operations like +, -, etc.*/
 class OpCompiler(errorHanlder: ErrorHandler) {
@@ -13,7 +13,7 @@ class OpCompiler(errorHanlder: ErrorHandler) {
   def compileBinopCode(op: Tag, tpe: Type): BinaryOp.Code = {
     def fail(tag: TypeTag): Int = {
       errorHanlder.fail(0, Some("compileBinopCode"),
-        s"Not a valid binop tag: $tag", Normal)
+        s"Not a valid binop tag: $tag", Fatal)
       0
     }
 
@@ -108,7 +108,7 @@ class OpCompiler(errorHanlder: ErrorHandler) {
 
         case _ =>
           errorHanlder.fail(0, Some("compileBinopCode"),
-            s"Not a primitive type: ${jtype.getTag}", Normal)
+            s"Not a primitive type: ${jtype.getTag}", Fatal)
           0
       }
 
@@ -118,7 +118,7 @@ class OpCompiler(errorHanlder: ErrorHandler) {
             BinaryOp.String_+
         } else {
           errorHanlder.fail(0, Some("compileBinopCode"),
-            s"Cannot compile type: ${jtype.getTag}", Normal)
+            s"Cannot compile type: ${jtype.getTag}", Fatal)
           0
         }
 

@@ -10,7 +10,7 @@ import scalajs_java.utils._
   *
   * The methods return instances of `irtpe.Type`
   */
-class TypeCompiler(errorHanlder: ErrorHandler) {
+class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
 
   def isArrayType(jExprType: JExprType): Boolean =
     jExprType.jtype.getTag == TypeTag.ARRAY
@@ -37,10 +37,10 @@ class TypeCompiler(errorHanlder: ErrorHandler) {
   }
 
   def compileClassType(tpe: JType): irtpe.Type =
-    Mangler.encodeClassType(tpe.tsym)
+    mangler.encodeClassType(tpe.tsym)
 
   def compileArrayType(tpe: JType)(implicit pos: Position): irtpe.Type = {
-    val tTag = Mangler.arrayTypeTag(tpe.toString)
+    val tTag = mangler.arrayTypeTag(tpe.toString)
     val dims = getArrayDims(tpe)
     irtpe.ArrayType(tTag, dims)
   }
@@ -53,8 +53,8 @@ class TypeCompiler(errorHanlder: ErrorHandler) {
 
   /** Compile a type encoded as an AST attribute */
   def compileType(tpe: Type)(implicit pos: Position): irtpe.Type = tpe match {
-    case tp: JExprType => compileJavaType(tp)
-    case StatementType => irtpe.NoType
+    case tp: JExprType          => compileJavaType(tp)
+    case StatementType | NoType => irtpe.NoType
   }
 
   def getArrayDims(tpe: JType)(implicit pos: Position): Int = {
@@ -85,10 +85,10 @@ class TypeCompiler(errorHanlder: ErrorHandler) {
   def compileClassType(typeTree: Tree)(
       implicit pos: Position): irtpe.ClassType = typeTree match {
     case id: Ident =>
-      Mangler.encodeClassType(id.symbol)
+      mangler.encodeClassType(id.symbol)
 
     case fa: FieldAccess =>
-      Mangler.encodeClassType(fa.symbol)
+      mangler.encodeClassType(fa.symbol)
 
     case _ =>
       errorHanlder.fail(pos.line, Some("compileClassType"),
@@ -104,7 +104,7 @@ class TypeCompiler(errorHanlder: ErrorHandler) {
 
     case aType@ArrayTypeTree(elemType, _) =>
       val dims = getArrayDims(aType)
-      val tname = Mangler.mangleType(getArrayElemType(elemType))
+      val tname = mangler.mangleType(getArrayElemType(elemType))
       irtpe.ArrayType(tname, dims)
 
     case ident: Ident =>
@@ -122,9 +122,10 @@ class TypeCompiler(errorHanlder: ErrorHandler) {
 
   def enclosingClassType(tpe: Type)(implicit pos: Position): irtpe.Type = {
     tpe match {
-      case StatementType    => irtpe.NoType
+      case StatementType | NoType =>
+        irtpe.NoType
+
       case JExprType(jtype) =>
-        println("ENCL TYPE: " + jtype.getReceiverType)
         compileType(JExprType(jtype.getEnclosingType))
     }
   }

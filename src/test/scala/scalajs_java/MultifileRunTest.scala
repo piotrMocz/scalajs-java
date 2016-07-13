@@ -113,6 +113,23 @@ class MultifileRunTest {
           """
             |static int x;
           """.stripMargin)))
+
+    assertRun("42",
+      """
+        |System.out.println(Test2.test3.x);
+      """.stripMargin,
+      List(("Test2",
+          """
+            |static Test3 test3 = new Test3(42);
+          """.stripMargin),
+        ("Test3",
+          """
+            |int x;
+            |
+            |Test3(int x) {
+            |  this.x = x;
+            |}
+          """.stripMargin)))
   }
 
   @Test def runMethodCall(): Unit = {

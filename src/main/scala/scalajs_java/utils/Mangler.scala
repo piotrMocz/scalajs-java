@@ -22,7 +22,7 @@ import scalajs_java.trees._
 /*
  * Name mangling
  */
-object Mangler {
+class Mangler {
 
 //  private val usedLocalNames: MSet[String] = MSet.empty[String]
 
@@ -232,11 +232,10 @@ object Mangler {
 
   // TODO
   private def mangleObjectType(jtype: JType): String = {
-    val tname = jtype.tsym.toString
+    val tsym = jtype.tsym
     if (jtype.getTag == TypeTag.ARRAY) "A" + mangleJType(jtype.allparams().head)
-    else if (tname == "java.lang.String")  "T"
-    else throw new Exception(
-      s"[mangleObjectType] Cannot yet handle type: ${jtype.tsym.toString}")
+    else if (tsym.toString == "java.lang.String")  "T"
+    else encodeClassFullName(tsym)
   }
 
   private def mangleJType(jtype: JType): String =
@@ -244,8 +243,8 @@ object Mangler {
     else mangleObjectType(jtype)
 
   def mangleType(tp: Type): String = tp match {
-    case StatementType => ""
-    case tp: JExprType => mangleJType(tp.jtype)
+    case StatementType | NoType => ""
+    case tp: JExprType          => mangleJType(tp.jtype)
   }
 
   // TODO this TypedTree class hierarchy is not very good, rethink

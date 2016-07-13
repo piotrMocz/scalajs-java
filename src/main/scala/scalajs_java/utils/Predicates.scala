@@ -96,4 +96,9 @@ object Predicates {
   def isClassMember(tree: Tree) =
     isMethod(tree) || isField(tree)
 
+  def isNull(tree: Tree) = tree match {
+    case NullLiteral() => true
+    case _             => false
+  }
+
 }

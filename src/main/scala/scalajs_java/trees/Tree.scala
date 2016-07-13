@@ -95,6 +95,11 @@ case class DoubleLiteral(value: Double, tp: Type)(
 case class ClassLiteral(value: Any, tp: Type)(
     implicit val pos: Position) extends Literal
 
+case class NullLiteral()(
+    implicit val pos: Position) extends Literal {
+  val tp: Type = NoType
+}
+
 case class Ident(symbol: Symbol, name: Name, tp: Type,
     refVar: Option[ScopeElem]=None, enclClass: Option[String]=None)(
     implicit val pos: Position) extends Expr

@@ -45,8 +45,10 @@ class SimpleRunTest {
     val fullTree = (new EnclClassPass).run(taggedTree)
     val sip = new StaticInitsPass
     sip.run(fullTree)
+    val cp = new ConstructorPass
+    cp.run(fullTree)
 
-    val compRes = new CompilerPass(sip.inits).run(fullTree)
+    val compRes = new CompilerPass(sip.inits, cp.constructors).run(fullTree)
     val classDefs = compRes._1
     val className = if (pkgName.isEmpty) "Test" else pkgName + ".Test"
     val mainObjectName = encodeClassName(className) + "$"
@@ -568,5 +570,106 @@ class SimpleRunTest {
       """
         |static int x = 42;
       """.stripMargin)
+  }
+
+  @Test def runObjectTypeMethods(): Unit = {
+    assertRun("42",
+      """
+        |Test test = getTest();
+        |System.out.println(test.foo());
+      """.stripMargin,
+      """
+        |static Test getTest() {
+        |  return new Test();
+        |}
+        |
+        |int foo() {
+        |  return 42;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test = new Test();
+        |Test test2 = testId(test);
+        |System.out.println(test2.foo());
+      """.stripMargin,
+      """
+        |static Test testId(Test t) {
+        |  return t;
+        |}
+        |
+        |int foo() {
+        |  return 42;
+        |}
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test = new Test(21);
+        |Test test2 = modifyTest(test);
+        |System.out.println(test2.x);
+      """.stripMargin,
+      """
+        |static Test modifyTest(Test t) {
+        |  t.x *= 2;
+        |  return t;
+        |}
+        |
+        |int x;
+        |
+        |Test(int x) {
+        |  this.x = x;
+        |}
+      """.stripMargin)
+  }
+
+  @Test def runObjectTypeFields(): Unit = {
+    assertRun("42",
+      """
+        |Test test1 = new Test();
+        |Test test2 = new Test();
+        |test2.x = 42;
+        |test1.t = test2;
+        |System.out.println(test1.t.x);
+      """.stripMargin,
+      """
+        |int x;
+        |Test t;
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test1 = new Test(21);
+        |Test test2 = new Test(42);
+        |test1.t = test2;
+        |System.out.println(test1.t.x);
+      """.stripMargin,
+      """
+        |Test(int x) {
+        |  this.x = x;
+        |}
+        |
+        |int x;
+        |Test t;
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test2 = new Test(42, null);
+        |Test test1 = new Test(21, test2);
+        |test1.t.x = 42;
+        |System.out.println(test1.t.x);
+      """.stripMargin,
+      """
+        |Test(int x, Test t) {
+        |  this.x = x;
+        |  this.t = t;
+        |}
+        |
+        |int x;
+        |Test t;
+      """.stripMargin)
+
   }
 }
