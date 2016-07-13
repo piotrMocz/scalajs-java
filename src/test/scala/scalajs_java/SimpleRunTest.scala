@@ -45,8 +45,10 @@ class SimpleRunTest {
     val fullTree = (new EnclClassPass).run(taggedTree)
     val sip = new StaticInitsPass
     sip.run(fullTree)
+    val cp = new ConstructorPass
+    cp.run(fullTree)
 
-    val compRes = new CompilerPass(sip.inits).run(fullTree)
+    val compRes = new CompilerPass(sip.inits, cp.constructors).run(fullTree)
     val classDefs = compRes._1
     val className = if (pkgName.isEmpty) "Test" else pkgName + ".Test"
     val mainObjectName = encodeClassName(className) + "$"
@@ -620,5 +622,54 @@ class SimpleRunTest {
         |  this.x = x;
         |}
       """.stripMargin)
+  }
+
+  @Test def runObjectTypeFields(): Unit = {
+    assertRun("42",
+      """
+        |Test test1 = new Test();
+        |Test test2 = new Test();
+        |test2.x = 42;
+        |test1.t = test2;
+        |System.out.println(test1.t.x);
+      """.stripMargin,
+      """
+        |int x;
+        |Test t;
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test1 = new Test(21);
+        |Test test2 = new Test(42);
+        |test1.t = test2;
+        |System.out.println(test1.t.x);
+      """.stripMargin,
+      """
+        |Test(int x) {
+        |  this.x = x;
+        |}
+        |
+        |int x;
+        |Test t;
+      """.stripMargin)
+
+    assertRun("42",
+      """
+        |Test test2 = new Test(42, null);
+        |Test test1 = new Test(21, test2);
+        |System.out.println(test1.t.x);
+      """.stripMargin,
+      """
+        |Test(int x, Test t) {
+        |  this.x = x;
+        |  this.t = t;
+        |  this.t.x = x;
+        |}
+        |
+        |int x;
+        |Test t;
+      """.stripMargin)
+
   }
 }

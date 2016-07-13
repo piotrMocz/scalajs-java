@@ -53,8 +53,8 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
 
   /** Compile a type encoded as an AST attribute */
   def compileType(tpe: Type)(implicit pos: Position): irtpe.Type = tpe match {
-    case tp: JExprType => compileJavaType(tp)
-    case StatementType => irtpe.NoType
+    case tp: JExprType          => compileJavaType(tp)
+    case StatementType | NoType => irtpe.NoType
   }
 
   def getArrayDims(tpe: JType)(implicit pos: Position): Int = {
