@@ -122,9 +122,10 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
 
   def enclosingClassType(tpe: Type)(implicit pos: Position): irtpe.Type = {
     tpe match {
-      case StatementType    => irtpe.NoType
+      case StatementType | NoType =>
+        irtpe.NoType
+
       case JExprType(jtype) =>
-        println("ENCL TYPE: " + jtype.getReceiverType)
         compileType(JExprType(jtype.getEnclosingType))
     }
   }

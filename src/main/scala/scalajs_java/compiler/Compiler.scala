@@ -296,6 +296,21 @@ class Compiler(val inits: Map[String, Expr],
     }
   }
 
+  def compileFieldAccessQualifier(selected: Expr)(
+      implicit pos : Position): irt.Tree = selected match {
+    case ident: Ident =>
+      val classType = typeCompiler.compileType(selected.tp)
+      irt.VarRef(compileSelectIdent(ident))(classType)
+
+    case fa: FieldAccess =>
+      compileFieldAccess(fa)
+
+    case _ =>
+      errorHanlder.fail(pos.line, Some("compileFieldAccessQualifier"),
+        s"Unknown selected tree: $selected", Fatal)
+      irt.Skip()
+  }
+
   def compileFieldAccess(fieldAcc: FieldAccess): irt.Select = {
     implicit val pos = utils.getPosition(fieldAcc)
 
@@ -303,19 +318,12 @@ class Compiler(val inits: Map[String, Expr],
     val classType = typeCompiler.compileType(fieldAcc.selected.tp)
     val tpe = typeCompiler.compileType(fieldAcc.tp)
     val qualifier =
-      if (Predicates.isThisSelect(fieldAcc)) {
+      if (Predicates.isThisSelect(fieldAcc))
         irt.This()(classType)
-      } else if (Predicates.isStatic(fieldAcc)) {
+      else if (Predicates.isStatic(fieldAcc))
         irt.LoadModule(irtpe.ClassType(classType.show() + "$"))
-      } else {
-        fieldAcc.selected match {
-          case ident: Ident =>
-            irt.VarRef(compileSelectIdent(ident))(classType)
-
-          case fa: FieldAccess =>
-            compileFieldAccess(fa)
-        }
-      }
+      else
+        compileFieldAccessQualifier(fieldAcc.selected)
 
     irt.Select(qualifier, item)(tpe)
   }
@@ -522,18 +530,12 @@ class Compiler(val inits: Map[String, Expr],
             val tpC = typeCompiler.compileType(tp)
             val argsC = args.map(compileTree)
             val qualifier =
-              if (Predicates.isThisSelect(fa)) {
+              if (Predicates.isThisSelect(fa))
                 irt.This()(classType)
-              } else if (isStatic) {
+              else if (isStatic)
                   irt.LoadModule(irtpe.ClassType(classType.show() + "$"))
-              } else {
-                selected match {
-                  case id: Ident =>
-                    irt.VarRef(compileSelectIdent(id))(classType)
-                  case fa: FieldAccess =>
-                    compileFieldAccess(fa)
-                }
-              }
+              else
+                compileFieldAccessQualifier(fa.selected)
 
             irt.Apply(qualifier, methodName, argsC)(tpC)
 

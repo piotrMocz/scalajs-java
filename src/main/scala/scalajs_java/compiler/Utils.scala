@@ -17,9 +17,12 @@ class Utils(val typeCompiler: TypeCompiler, val errorHandler: ErrorHandler) {
     case ident: Ident =>
       ident.symbol.toString
 
+    case fieldAccess: FieldAccess =>
+      fieldAccess.symbol.toString
+
     case _ =>
       errorHandler.fail(pos.line, Some("[getClassNameFromExpr]"),
-        "Failed to determine class name.", Fatal)
+        s"Failed to determine class name (from $expr)", Fatal)
       ""
   }
 
@@ -32,8 +35,8 @@ class Utils(val typeCompiler: TypeCompiler, val errorHandler: ErrorHandler) {
   }
 
   def argListsMatch(callArgs: List[Expr], defArgs: List[VarDecl]): Boolean = {
-
     if (callArgs.length != defArgs.length) return false
+    if (callArgs.isEmpty) return true
 
     (callArgs zip defArgs).map(p => argsMatch(p._1, p._2)).reduce {_ && _}
   }

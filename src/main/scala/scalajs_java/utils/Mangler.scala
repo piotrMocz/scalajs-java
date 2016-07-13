@@ -243,8 +243,8 @@ class Mangler {
     else mangleObjectType(jtype)
 
   def mangleType(tp: Type): String = tp match {
-    case StatementType => ""
-    case tp: JExprType => mangleJType(tp.jtype)
+    case StatementType | NoType => ""
+    case tp: JExprType          => mangleJType(tp.jtype)
   }
 
   // TODO this TypedTree class hierarchy is not very good, rethink

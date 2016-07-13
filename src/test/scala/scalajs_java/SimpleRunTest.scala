@@ -658,13 +658,13 @@ class SimpleRunTest {
       """
         |Test test2 = new Test(42, null);
         |Test test1 = new Test(21, test2);
+        |test1.t.x = 42;
         |System.out.println(test1.t.x);
       """.stripMargin,
       """
         |Test(int x, Test t) {
         |  this.x = x;
         |  this.t = t;
-        |  this.t.x = x;
         |}
         |
         |int x;
