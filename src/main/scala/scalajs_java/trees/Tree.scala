@@ -97,7 +97,7 @@ case class ClassLiteral(value: Any, tp: Type)(
 
 case class NullLiteral()(
     implicit val pos: Position) extends Literal {
-  val tp: Type = NoType
+  val tp: Type = NullType
 }
 
 case class Ident(symbol: Symbol, name: Name, tp: Type,

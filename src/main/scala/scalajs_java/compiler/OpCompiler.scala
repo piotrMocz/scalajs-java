@@ -5,26 +5,36 @@ import com.sun.tools.javac.tree.JCTree.Tag
 import org.scalajs.core.ir.Trees.{BinaryOp, UnaryOp}
 
 import scalajs_java.trees.{JExprType, Type}
-import scalajs_java.utils.{ErrorHandler, Fatal, Normal}
+import scalajs_java.utils.{ErrorHandler, Fatal, Normal, Predicates}
 
 /** Compiles/translates the operations like +, -, etc.*/
 class OpCompiler(errorHanlder: ErrorHandler) {
 
-  def compileBinopCode(op: Tag, tpe: Type): BinaryOp.Code = {
+  private def classOp(tLeft: Type, tRight: Type): Boolean =
+    Predicates.isClassType(tLeft) && Predicates.isClassType(tRight)
+
+  private def stringOp(tLeft: Type, tRight: Type): Boolean = {
+    classOp(tLeft, tRight) &&
+      (Predicates.isStringType(tLeft) || Predicates.isStringType(tRight))
+  }
+
+  def compileBinopCode(op: Tag, tpeLeft: Type, tpeRight: Type): BinaryOp.Code = {
     def fail(tag: TypeTag): Int = {
       errorHanlder.fail(0, Some("compileBinopCode"),
         s"Not a valid binop tag: $tag", Fatal)
       0
     }
 
-    tpe match {
-      case JExprType(jtype) if jtype.isPrimitive => jtype.getTag match {
+    (tpeLeft, tpeRight) match {
+
+      case (JExprType(jtypeLeft), JExprType(jtypeRight))
+        if jtypeLeft.isPrimitive && jtypeLeft.isPrimitive => jtypeLeft.getTag match {
         case TypeTag.BOOLEAN => op match {
           case Tag.EQ => BinaryOp.Boolean_==
           case Tag.NE => BinaryOp.Boolean_!=
           case Tag.AND => BinaryOp.Boolean_&
           case Tag.OR => BinaryOp.Boolean_|
-          case _ => fail(jtype.getTag)
+          case _ => fail(jtypeLeft.getTag)
         }
 
         case TypeTag.INT | TypeTag.CHAR | TypeTag.SHORT | TypeTag.BYTE =>
@@ -47,7 +57,7 @@ class OpCompiler(errorHanlder: ErrorHandler) {
             case Tag.GE => BinaryOp.Num_>=
             case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Int_-
             case Tag.PREINC | Tag.POSTINC => BinaryOp.Int_+
-            case _ => fail(jtype.getTag)
+            case _ => fail(jtypeLeft.getTag)
           }
 
         case TypeTag.LONG => op match {
@@ -69,7 +79,7 @@ class OpCompiler(errorHanlder: ErrorHandler) {
           case Tag.GE => BinaryOp.Long_>=
           case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Long_-
           case Tag.PREINC | Tag.POSTINC => BinaryOp.Long_+
-          case _ => fail(jtype.getTag)
+          case _ => fail(jtypeLeft.getTag)
         }
 
         case TypeTag.FLOAT => op match {
@@ -86,7 +96,7 @@ class OpCompiler(errorHanlder: ErrorHandler) {
           case Tag.GE => BinaryOp.Num_>=
           case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Float_-
           case Tag.PREINC | Tag.POSTINC => BinaryOp.Float_+
-          case _ => fail(jtype.getTag)
+          case _ => fail(jtypeLeft.getTag)
         }
 
         case TypeTag.DOUBLE => op match {
@@ -103,24 +113,26 @@ class OpCompiler(errorHanlder: ErrorHandler) {
           case Tag.GE => BinaryOp.Num_>=
           case Tag.PREDEC | Tag.POSTDEC => BinaryOp.Double_-
           case Tag.PREINC | Tag.POSTINC => BinaryOp.Double_+
-          case _ => fail(jtype.getTag)
+          case _ => fail(jtypeLeft.getTag)
         }
 
         case _ =>
           errorHanlder.fail(0, Some("compileBinopCode"),
-            s"Not a primitive type: ${jtype.getTag}", Fatal)
+            s"Not a primitive type: ${jtypeLeft.getTag}", Fatal)
           0
       }
 
-      case JExprType(jtype) =>
-        if (jtype.getTag == TypeTag.CLASS &&
-            jtype.tsym.toString == "java.lang.String") {
-            BinaryOp.String_+
-        } else {
-          errorHanlder.fail(0, Some("compileBinopCode"),
-            s"Cannot compile type: ${jtype.getTag}", Fatal)
-          0
-        }
+      case (typeLeft, typeRight) if stringOp(typeLeft, typeRight) &&
+        op == Tag.PLUS =>
+        BinaryOp.String_+
+
+      case (typeLeft, typeRight) if classOp(typeLeft, typeRight) &&
+        op == Tag.EQ =>
+        BinaryOp.===
+
+      case (typeLeft, typeRight) if classOp(typeLeft, typeRight) &&
+          op == Tag.NE =>
+        BinaryOp.!==
 
       case _ =>
         throw new Exception(s"Cannot yet handle op: $op")

@@ -243,7 +243,7 @@ class Mangler {
     else mangleObjectType(jtype)
 
   def mangleType(tp: Type): String = tp match {
-    case StatementType | NoType => ""
+    case StatementType | NullType => ""
     case tp: JExprType          => mangleJType(tp.jtype)
   }
 

@@ -39,7 +39,6 @@ class MultifileRunTest {
        |}
     """.stripMargin
 
-
   private def assertRun(expected: Any, mainCode: String,
                         classes: List[(String, String)],
                         pkgName: String=""): Unit = {

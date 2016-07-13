@@ -83,6 +83,12 @@ object Predicates {
     case _                => false
   }
 
+  def isClassType(tpe: Type): Boolean = tpe match {
+    case JExprType(jtype) => !jtype.isPrimitive
+    case NullType         => true
+    case _                => false
+  }
+
   def isMethod(tree: Tree) = tree match {
     case _: MethodDecl => true
     case _             => false

@@ -12,7 +12,7 @@ case object StatementType extends Type
 
 case class JExprType(jtype: JType) extends Type
 
-case object NoType extends Type
+case object NullType extends Type
 
 case object JExprType {
   def booleanType(): JExprType =

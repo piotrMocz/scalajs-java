@@ -417,14 +417,14 @@ class Compiler(val inits: Map[String, Expr],
         ???
 
       case Binary(op, left, right, tp) =>
-        val opC = opCompiler.compileBinopCode(op, left.tp)
+        val opC = opCompiler.compileBinopCode(op, left.tp, right.tp)
         val leftC = compileExpr(left)
         val rightC = compileExpr(right)
 
         irt.BinaryOp(opC, leftC, rightC)
 
       case Unary(op, arg, tp) =>
-        val opC = opCompiler.compileBinopCode(op, arg.tp)
+        val opC = opCompiler.compileBinopCode(op, arg.tp, arg.tp)
         val argC = compileExpr(arg)
         val binOpC = irt.BinaryOp(opC, argC, irt.IntLiteral(1))
         val assignC = irt.Assign(argC, binOpC)
@@ -665,7 +665,7 @@ class Compiler(val inits: Map[String, Expr],
       case If(cond, thenp, elsep) =>
         val condC = compileExpr(cond)
         val thenpC = compileStatement(thenp)
-        val elsepC = elsep.map(compileStatement).getOrElse(irt.EmptyTree)
+        val elsepC = elsep.map(compileStatement).getOrElse(irt.Undefined())
         val tpe = irtpe.NoType  // in Java if won't ever be in expression position
 
         irt.If(condC, thenpC, elsepC)(tpe)

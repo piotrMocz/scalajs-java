@@ -670,6 +670,33 @@ class SimpleRunTest {
         |int x;
         |Test t;
       """.stripMargin)
+  }
 
+  @Test def runNullTest(): Unit = {
+    assertRun("42",
+      """
+        |Test test = null;
+        |if (test == null) System.out.println(42);
+        |else System.out.println(21);
+      """.stripMargin, "")
+
+    assertRun("42",
+      """
+        |Test test = new Test();
+        |if (test == null) System.out.println(21);
+        |else System.out.println(42);
+      """.stripMargin, "")
+
+    assertRun("42",
+      """
+        |Test test = null;
+        |if (test == null) System.out.println(42);
+      """.stripMargin, "")
+
+    assertRun("42",
+      """
+        |Test test = new Test();
+        |if (test != null) System.out.println(42);
+      """.stripMargin, "")
   }
 }
