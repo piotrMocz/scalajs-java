@@ -268,3 +268,4 @@ case object ClassMember extends VarKind
 case object Param extends VarKind
 case object LocalVar extends VarKind
 case object Method extends VarKind
+case object Class extends VarKind

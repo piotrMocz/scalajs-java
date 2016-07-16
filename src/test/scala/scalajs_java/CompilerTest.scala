@@ -24,7 +24,7 @@ class CompilerTest {
   private implicit val DummyPos2 = Position(0)
 
   private val errorHanlder = new ErrorHandler(CompilerPhase("Test compile"))
-  private val compiler = new Compiler(Map.empty, Map.empty, errorHanlder)
+  private val compiler = new Compiler(Map.empty, Map.empty, Map.empty, errorHanlder)
 
   private val MainObjectFullName = compiler.MainObjectFullName
   private val MainClassFullName = MainObjectFullName + "$"

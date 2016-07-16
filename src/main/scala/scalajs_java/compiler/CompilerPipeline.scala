@@ -35,6 +35,7 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
 
     val opTrees2 = treesScopes._1
     val scope = Scope.mkScope(treesScopes._2)
+    val classes = Scope.getClasses(scope)
 
     val taggedTrees = opTrees2.map { ot =>
       new RefTagPass(verbose, scope).run(ot)
@@ -57,7 +58,7 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
     })
 
     val irs = (fullTrees zip initLists).map { ft =>
-      new CompilerPass(ft._2, constructors, verbose).run(ft._1)
+      new CompilerPass(ft._2, classes, constructors, verbose).run(ft._1)
     }
 
     val defsObjNames = irs.unzip

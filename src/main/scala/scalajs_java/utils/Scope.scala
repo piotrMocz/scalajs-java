@@ -10,6 +10,7 @@ sealed trait ScopeElem {
 }
 case class VarInfo(name: String, decl: VarDecl, kind: VarKind) extends ScopeElem
 case class MethodInfo(name: String, decl: MethodDecl, kind: VarKind=Method) extends ScopeElem
+case class ClassInfo(name: String, decl: ClassDecl, kind: VarKind=Class) extends ScopeElem
 case class LibraryMethod(name: String) extends ScopeElem {
   override val decl: Tree = Skip()(Position.noPosition)
   override val kind: VarKind = Method
@@ -76,11 +77,22 @@ trait Scope {
 object Scope {
 
   type ScopeT = MMap[String, List[ScopeElem]]
+  type ClassMapT = Map[String, List[ClassDecl]]
 
   def empty: ScopeT = MMap.empty
 
   def mkScope(scopes: List[ScopeT]): ScopeT =
     scopes.reduce {_ ++ _}
+
+  def getClasses(scope: ScopeT): ClassMapT = {
+    def getClassDecls(scopeElems: List[ScopeElem]): List[ClassDecl] = {
+      scopeElems.collect { case ci: ClassInfo => ci } map(_.decl)
+    }
+
+    scope.map(scopeElem => (scopeElem._1, getClassDecls(scopeElem._2)))
+        .filter(entry => entry._2.nonEmpty)
+        .toMap
+  }
 
   /* TODO make only `System.out.println` a library method,
    * not every `println` */

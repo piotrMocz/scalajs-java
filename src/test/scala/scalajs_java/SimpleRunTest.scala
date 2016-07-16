@@ -40,15 +40,24 @@ class SimpleRunTest {
     javaCompiler.compile("Test", source)
 
     val tree = (new JTraversePass).run(javaCompiler.compilationUnit)
+
+    val esp = new ExpSymsPass
+    esp.run(tree)
+    val classes = Scope.getClasses(esp.scope)
+
     val opTree = (new OpTraversePass).run(tree)
+
     val taggedTree = new RefTagPass(scope = Scope.empty).run(opTree)
+
     val fullTree = (new EnclClassPass).run(taggedTree)
+
     val sip = new StaticInitsPass
     sip.run(fullTree)
+
     val cp = new ConstructorPass
     cp.run(fullTree)
 
-    val compRes = new CompilerPass(sip.inits, cp.constructors).run(fullTree)
+    val compRes = new CompilerPass(sip.inits, classes, cp.constructors).run(fullTree)
     val classDefs = compRes._1
     val className = if (pkgName.isEmpty) "Test" else pkgName + ".Test"
     val mainObjectName = encodeClassName(className) + "$"

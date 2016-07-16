@@ -28,6 +28,8 @@ class ExportedSymbolsTraverse(errHandler: ErrorHandler) extends Traverse with Sc
       expMethods.foreach(addToScope)
     }
 
+    addToScope(ClassInfo(classDecl.name, classDecl))
+
     classDecl.copy()
   }
 }

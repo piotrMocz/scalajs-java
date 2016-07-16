@@ -8,11 +8,14 @@ import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 
 import scalajs_java.compiler.passes.ConstructorPass.ConstructorsT
 import scalajs_java.trees._
+import scalajs_java.utils.Scope.ClassMapT
 import scalajs_java.utils._
 
 
-/** Main compiler. */
+/** Main compiler.
+  * TODO remove the constructors pass (take that info from `classes`. */
 class Compiler(val inits: Map[String, Expr],
+               val classes: ClassMapT,
                val constructors: ConstructorsT,
                val errorHanlder: ErrorHandler) {
 
@@ -632,6 +635,11 @@ class Compiler(val inits: Map[String, Expr],
           case Method =>
             errorHanlder.fail(pos.line, Some("compileStatement: VarDecl"),
               "Expected: Method declaration, got: Variable Declaration", Normal)
+            irt.EmptyTree
+
+          case Class =>
+            errorHanlder.fail(pos.line, Some("compileStatement: VarDecl"),
+              "Expected: Method declaration, got: Class Declaration", Normal)
             irt.EmptyTree
         }
 
