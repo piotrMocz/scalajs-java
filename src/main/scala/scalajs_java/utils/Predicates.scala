@@ -89,6 +89,11 @@ object Predicates {
     case _                => false
   }
 
+  def isNullType(tpe: Type): Boolean = tpe match {
+    case NullType => true
+    case _        => false
+  }
+
   def isMethod(tree: Tree) = tree match {
     case _: MethodDecl => true
     case _             => false

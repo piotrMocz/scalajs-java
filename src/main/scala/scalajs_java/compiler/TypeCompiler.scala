@@ -37,7 +37,7 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
   }
 
   def compileClassType(tpe: JType): irtpe.Type =
-    mangler.encodeClassType(tpe.tsym)
+    mangler.encodeClassType(tpe.tsym.baseSymbol())
 
   def compileArrayType(tpe: JType)(implicit pos: Position): irtpe.Type = {
     val tTag = mangler.arrayTypeTag(tpe.toString)
@@ -90,6 +90,9 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
     case fa: FieldAccess =>
       mangler.encodeClassType(fa.symbol)
 
+    case ta: TypeApply =>
+      compileClassType(ta.tpe)
+
     case _ =>
       errorHanlder.fail(pos.line, Some("compileClassType"),
         s"[compileClassType] Not a class type tree: ${typeTree.toString}",
@@ -113,6 +116,9 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
 
     case fa: FieldAccess =>
       compileClassType(fa)
+
+    case ta: TypeApply =>
+      compileClassType(ta.tpe)
 
     case _ =>
       errorHanlder.fail(pos.line, Some("compileType"),

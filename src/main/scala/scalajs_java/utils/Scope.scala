@@ -77,7 +77,7 @@ trait Scope {
 object Scope {
 
   type ScopeT = MMap[String, List[ScopeElem]]
-  type ClassMapT = Map[String, List[ClassDecl]]
+  type ClassMapT = Map[String, ClassDecl]
 
   def empty: ScopeT = MMap.empty
 
@@ -91,6 +91,7 @@ object Scope {
 
     scope.map(scopeElem => (scopeElem._1, getClassDecls(scopeElem._2)))
         .filter(entry => entry._2.nonEmpty)
+        .map(entry => (entry._1, entry._2.head))
         .toMap
   }
 

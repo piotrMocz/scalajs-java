@@ -34,7 +34,7 @@ class Compiler(val inits: Map[String, Expr],
 
   val typeCompiler = new TypeCompiler(mangler, errorHanlder)
   
-  val utils = new Utils(typeCompiler, errorHanlder)
+  val utils = new Utils(classes, typeCompiler, errorHanlder)
 
   // Compiling constructors
 
@@ -388,7 +388,7 @@ class Compiler(val inits: Map[String, Expr],
         ???
 
       case expr: TypeApply =>
-        ???
+        irt.EmptyTree // TODO
 
       case expr: ArrayTypeTree =>
         ???
