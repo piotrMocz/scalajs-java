@@ -29,8 +29,6 @@ trait Scope {
 
   val mangler = new Mangler
 
-  val utils = new Utils(Map.empty, errorHanlder)
-
   def addToScope(scopeElem: ScopeElem): Unit = {
     val sym = scopeElem.name
     if (!scope.contains(sym)) scope(sym) = Nil
@@ -61,7 +59,7 @@ trait Scope {
   def getScopeElems(members: List[Tree]): List[ScopeElem] = {
     members.collect {
       case vd: VarDecl =>
-        val pos = utils.getPosition(vd)
+        val pos = Utils.getPosition(vd)
         val mangledName = vd.kind match {
           case LocalVar    => mangler.encodeLocalSym(vd.symbol)(pos)
           case Param       => mangler.encodeParamIdent(vd.symbol)(pos)

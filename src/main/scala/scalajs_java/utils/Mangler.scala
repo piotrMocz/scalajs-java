@@ -244,13 +244,15 @@ class Mangler {
 
   def mangleType(tp: Type): String = tp match {
     case StatementType | NullType => ""
-    case tp: JExprType          => mangleJType(tp.jtype)
+    case AnyType                  => "O"
+    case tp: JExprType            => mangleJType(tp.jtype)
   }
 
   // TODO this TypedTree class hierarchy is not very good, rethink
   def mangleType(typeTree: Tree): String = typeTree match {
     case t: PrimitiveTypeTree => manglePrimitiveType(t.typeTag)
     case t: ArrayTypeTree     => "A" + mangleType(t.elemType)
+    case t: Ident             => encodeClassFullName(t.symbol) // TODO, but it may be safe to assume it's a class here
     case t: TypedTree         => mangleType(t.tp)
     case _                    => throw new Exception("Cannot mangle names without types")
   }

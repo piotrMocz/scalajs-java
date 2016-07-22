@@ -32,12 +32,12 @@ class ErasureTraverse(val errorHandler: ErrorHandler) extends Traverse {
     typeParams.contains(ident.name.str)
 
   // TODO more cases
-  def eraseType(tpe: Tree): Tree = tpe match {
+  def eraseTypeTree(tpe: Tree): Tree = tpe match {
     case ta: TypeApply =>
-      eraseType(ta.tpe)
+      eraseTypeTree(ta.tpe)
 
     case ident: Ident if isTypeParam(ident) =>
-      ident
+      AnyTypeTree()(tpe.pos)
 
     case tp =>
       tp
@@ -54,13 +54,13 @@ class ErasureTraverse(val errorHandler: ErrorHandler) extends Traverse {
   }
 
   override def traverse(varDecl: VarDecl): VarDecl = {
-    val tpe = eraseType(varDecl.varType)
+    val tpe = eraseTypeTree(varDecl.varType)
 
     super.traverse(varDecl.copy(varType = tpe)(varDecl.pos))
   }
 
   override def traverse(newClass: NewClass): NewClass = {
-    val tpe = eraseType(newClass.ident)
+    val tpe = eraseTypeTree(newClass.ident)
     tpe match {
       case tpe: Expr => super.traverse(newClass.copy(ident = tpe)(newClass.pos))
       case _         => throw new Exception(
@@ -69,7 +69,7 @@ class ErasureTraverse(val errorHandler: ErrorHandler) extends Traverse {
   }
 
   override def traverse(methodDecl: MethodDecl): MethodDecl = {
-    val retTpe = methodDecl.retType.map(eraseType)
+    val retTpe = methodDecl.retType.map(eraseTypeTree)
 
     super.traverse(methodDecl.copy(retType = retTpe)(methodDecl.pos))
   }
@@ -77,7 +77,7 @@ class ErasureTraverse(val errorHandler: ErrorHandler) extends Traverse {
   // TODO Annotation
 
   override def traverse(newArray: NewArray): NewArray = {
-    val elTypeOpt = newArray.elemType.map(eraseType)
+    val elTypeOpt = newArray.elemType.map(eraseTypeTree)
 
     elTypeOpt match {
       case elTpe: Option[Expr] => super.traverse(newArray.copy(elemType = elTpe)(newArray.pos))

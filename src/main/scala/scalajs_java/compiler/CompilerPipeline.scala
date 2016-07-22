@@ -45,10 +45,6 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
       new ErasurePass(verbose).run(tt)
     }
 
-    println("====================== Erased tree =============================")
-    println(erasedTrees)
-    println("================================================================")
-
     val fullTrees = taggedTrees.map { tt =>
       new EnclClassPass(verbose).run(tt)
     }

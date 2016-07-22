@@ -70,6 +70,10 @@ case class ArrayTypeTree(elemType: Tree, tp: Type)(
 case class PrimitiveTypeTree(typeKind: TypeKind, typeTag: TypeTag, tp: Type)(
     implicit val pos: Position) extends Expr
 
+case class AnyTypeTree()(implicit val pos: Position) extends Expr {
+  override def tp: Type = AnyType
+}
+
 // Literals
 
 sealed trait Literal extends Expr
