@@ -34,7 +34,7 @@ class Compiler(val inits: Map[String, Expr],
 
   val typeCompiler = new TypeCompiler(mangler, errorHanlder)
   
-  val utils = new Utils(classes, typeCompiler, errorHanlder)
+  val utils = new Utils(classes, errorHanlder)
 
   // Compiling constructors
 
@@ -288,9 +288,16 @@ class Compiler(val inits: Map[String, Expr],
   def compileSelectIdent(expr: Expr): irt.Ident = {
     implicit val pos = utils.getPosition(expr)
     expr match {
-      case Ident(sym, _, _, _, _) =>
-        if (sym.isLocal) mangler.encodeLocalSym(sym)
-        else mangler.encodeFieldSym(sym) // TODO
+      case Ident(sym, _, _, refVar, _) =>
+        refVar match {
+          case Some(VarInfo(_, mangledName, _, _)) =>
+            mangledName
+
+          case None =>
+            if (sym.isLocal) mangler.encodeLocalSym(sym)
+            else mangler.encodeFieldSym(sym)
+        }
+
 
       case _ =>
         errorHanlder.fail(pos.line, Some("compileSelectIdent"),
@@ -347,16 +354,14 @@ class Compiler(val inits: Map[String, Expr],
     val sym = ident.symbol
     val tpe = typeCompiler.compileType(ident.tp)
     ident.refVar match {
-      case Some(VarInfo(_, vd, ClassMember)) if Predicates.isStatic(vd) =>
+      case Some(VarInfo(_, mangledIdent, vd, ClassMember)) if Predicates.isStatic(vd) =>
         compileStaticAccess(ident, vd)
 
-      case Some(VarInfo(_, _, LocalVar)) =>
-        val name = mangler.encodeLocalSym(sym)
-        irt.VarRef(name)(tpe)
+      case Some(VarInfo(_, mangledIdent, vDecl, LocalVar)) =>
+        irt.VarRef(mangledIdent)(tpe)
 
-      case Some(VarInfo(_, _, Param)) =>
-        val name = mangler.encodeParamIdent(sym)
-        irt.VarRef(name)(tpe)
+      case Some(VarInfo(_, mangledIdent, vDecl, Param)) =>
+        irt.VarRef(mangledIdent)(tpe)
 
       case _ =>
         val name = irt.Ident(ident.name)

@@ -279,7 +279,7 @@ class JTreeTraverse(val errorHanlder: ErrorHandler) {
   private def traverseMethodDecl(methodDecl: JCTree.JCMethodDecl)(
       implicit pos: Position): MethodDecl = {
     val name = Name.fromJName(methodDecl.getName)
-    val symbol = methodDecl.sym
+    val symbol = Symbol.fromJava(methodDecl.sym)
     val modifiers = traverseModifiers(methodDecl.getModifiers)
     val typeParams = methodDecl.getTypeParameters.map(traverseTypeParam).toList
     val recvParam = Option(methodDecl.getReceiverParameter)
@@ -329,7 +329,7 @@ class JTreeTraverse(val errorHanlder: ErrorHandler) {
       kind: VarKind = ClassMember)(implicit pos: Position): VarDecl = {
     val initializer = Option(varDecl.getInitializer).map(traverseExpr)
     val modifiers = traverseModifiers(varDecl.getModifiers)
-    val symbol = varDecl.sym
+    val symbol = Symbol.fromJava(varDecl.sym)
     val name = Name.fromJName(varDecl.name)
     val nameExpr = Option(varDecl.getNameExpression).map(traverseExpr)
     val tpe = traverseTree(varDecl.getType)
@@ -341,7 +341,7 @@ class JTreeTraverse(val errorHanlder: ErrorHandler) {
   private def traverseClassDecl(classDecl: JCTree.JCClassDecl)(
       implicit pos: Position): ClassDecl = {
     val name = Name.fromJName(classDecl.sym.fullname)
-    val symbol = classDecl.sym
+    val symbol = Symbol.fromJava(classDecl.sym)
     val typeParams = classDecl.getTypeParameters.map(traverseTypeParam).toList
     val extendsCl = Option(classDecl.getExtendsClause).map(traverseExpr)
     val implementsCl = classDecl.getImplementsClause.map(traverseExpr).toList
@@ -456,7 +456,7 @@ class JTreeTraverse(val errorHanlder: ErrorHandler) {
 
   private def traverseIdent(ident: JCTree.JCIdent)(
       implicit pos: Position): Ident = {
-    val symbol = ident.sym
+    val symbol = Symbol.fromJava(ident.sym)
     val name = Name.fromJName(ident.getName)
     val tp = JExprType(ident.`type`)
 
@@ -467,7 +467,8 @@ class JTreeTraverse(val errorHanlder: ErrorHandler) {
       implicit pos: Position): FieldAccess = {
     val name = Name.fromJName(fieldAccess.getIdentifier)
     val selected = traverseExpr(fieldAccess.getExpression)
-    val symbol = fieldAccess.sym
+    val symbol = Symbol.fromJava(fieldAccess.sym)
+
     val tp = JExprType(fieldAccess.`type`)
 
     FieldAccess(name, symbol, selected, tp)

@@ -9,7 +9,6 @@ import scalajs_java.utils.Scope.ClassMapT
 import scalajs_java.utils.{ErrorHandler, Fatal, Predicates}
 
 class Utils(val classes: ClassMapT,
-            val typeCompiler: TypeCompiler,
             val errorHandler: ErrorHandler) {
 
   def getPosition(tree: Tree): Position =  tree.pos match {

@@ -13,7 +13,7 @@ package scalajs_java.utils
 
 import javax.lang.model.`type`.TypeKind
 
-import com.sun.tools.javac.code.{Symbol, TypeTag, Type => JType}
+import com.sun.tools.javac.code.{TypeTag, Type => JType}
 import org.scalajs.core.ir.{Definitions, Position, Trees => irt, Types => irtpe}
 
 import scala.collection.mutable.{Map => MMap, Set => MSet}
@@ -92,7 +92,7 @@ class Mangler {
         "f"
 
     val encodedName = name + "$" + idSuffix
-    irt.Ident(mangleJSName(encodedName), Some(sym.flatName().toString))
+    irt.Ident(mangleJSName(encodedName), Some(sym.flatName()))
   }
 
   def encodeMethod(mDecl: MethodDecl, reflProxy: Boolean = false)
@@ -139,12 +139,12 @@ class Mangler {
     irt.Ident(
       mangleJSName(encodeMemberNameInternal(sym)) +
           // makeParamsString(List(internalName(sym.`type`))),
-      Some(sym.flatName().toString))
+      Some(sym.flatName()))
   }
 
   def encodeLocalSym(sym: Symbol)(implicit pos: Position): irt.Ident = {
     require(sym.isLocal, "encodeLocalSym called with non-local symbol: " + sym)
-    irt.Ident(localSymbolName(sym), Some(sym.flatName().toString))
+    irt.Ident(localSymbolName(sym), Some(sym.flatName()))
   }
 
   // TODO
@@ -155,7 +155,7 @@ class Mangler {
     irtpe.ClassType(encodeClassFullName(sym))
 
   def encodeClassFullNameIdent(sym: Symbol)(implicit pos: Position): irt.Ident = {
-    irt.Ident(encodeClassFullName(sym), Some(sym.flatName().toString))
+    irt.Ident(encodeClassFullName(sym), Some(sym.flatName()))
   }
 
   def encodeClassFullName(sym: Symbol): String = {
@@ -232,9 +232,9 @@ class Mangler {
 
   // TODO
   private def mangleObjectType(jtype: JType): String = {
-    val tsym = jtype.tsym
+    val tsym = Symbol.fromJava(jtype.tsym)
     if (jtype.getTag == TypeTag.ARRAY) "A" + mangleJType(jtype.allparams().head)
-    else if (tsym.toString == "java.lang.String")  "T"
+    else if (tsym.name == "java.lang.String")  "T"
     else encodeClassFullName(tsym)
   }
 

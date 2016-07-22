@@ -4,7 +4,7 @@ import javax.lang.model.`type`.TypeKind
 import javax.lang.model.element.Modifier
 
 import com.sun.tools.javac.code.Symbol.{ClassSymbol, MethodSymbol, VarSymbol}
-import com.sun.tools.javac.code.{Symbol, TypeTag}
+import com.sun.tools.javac.code.{Symbol=>JSymbol, TypeTag}
 import com.sun.tools.javac.tree.JCTree.Tag
 import com.sun.tools.javac.util.{Name => JName}
 
@@ -27,7 +27,7 @@ case class Import(qualifiedIdent: Tree)(
 case class Modifiers(flags: Set[Modifier], annotations: List[Annotation])(
     implicit val pos: Position) extends Tree
 
-case class MethodDecl(name: Name, symbol: MethodSymbol, modifiers: Modifiers,
+case class MethodDecl(name: Name, symbol: Symbol, modifiers: Modifiers,
     typeParams: List[TypeParam], recvParam: Option[VarDecl],
     params: List[VarDecl], thrown: List[Expr], retType: Option[Tree],
     body: Block, defVal: Option[Expr])(implicit val pos: Position) extends Tree
@@ -170,10 +170,10 @@ sealed trait Statement extends Tree with StatementTree
 
 // TODO sym: Symbol.VarSymbol
 case class VarDecl(mods: Modifiers, name: Name, nameExpr: Option[Expr],
-    symbol: VarSymbol, varType: Tree, init: Option[Expr], kind: VarKind)(
+    symbol: Symbol, varType: Tree, init: Option[Expr], kind: VarKind)(
     implicit val pos: Position) extends Statement
 
-case class ClassDecl(name: Name, symbol: ClassSymbol, typeParams: List[TypeParam],
+case class ClassDecl(name: Name, symbol: Symbol, typeParams: List[TypeParam],
     extendsCl: Option[Expr], implementsCl: List[Expr], members: List[Tree])(
     implicit val pos: Position) extends Statement
 
@@ -242,6 +242,35 @@ case object Name {
 
   implicit def nameToString(name: Name): String =
     name.str
+}
+
+class Symbol(val name: String,
+             val owner: Symbol,
+             val isPrivate: Boolean=false,
+             val isLocal: Boolean=false,
+             val isStatic: Boolean=false,
+             val isConstructor: Boolean=false,
+             val isInterface: Boolean=false) {
+
+  def flatName(): String = name
+
+  override def toString: String = this.name
+
+}
+
+object Symbol {
+
+  def fromJava(jSymbol: JSymbol): Symbol = {
+    if (jSymbol == null || jSymbol.toString == "") {
+      null
+    } else {
+      val owner = Symbol.fromJava(jSymbol.owner)
+      val nameStr = jSymbol.baseSymbol().toString.takeWhile(c => c != '(' && c != '<')
+
+      new Symbol(nameStr, owner, jSymbol.isPrivate, jSymbol.isLocal,
+        jSymbol.isStatic, jSymbol.isConstructor, jSymbol.isInterface)
+    }
+  }
 }
 
 case class Position(line: Int)

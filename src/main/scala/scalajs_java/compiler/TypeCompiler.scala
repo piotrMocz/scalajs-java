@@ -37,7 +37,7 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
   }
 
   def compileClassType(tpe: JType): irtpe.Type =
-    mangler.encodeClassType(tpe.tsym.baseSymbol())
+    mangler.encodeClassType(Symbol.fromJava(tpe.tsym))
 
   def compileArrayType(tpe: JType)(implicit pos: Position): irtpe.Type = {
     val tTag = mangler.arrayTypeTag(tpe.toString)

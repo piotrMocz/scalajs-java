@@ -2,13 +2,16 @@ package scalajs_java.utils
 
 import scala.collection.mutable.{Map => MMap}
 import scalajs_java.trees._
+import org.scalajs.core.ir.{Trees => irt}
+
+import scalajs_java.compiler.Utils
 
 sealed trait ScopeElem {
   val name: String
   val decl: Tree
   val kind: VarKind
 }
-case class VarInfo(name: String, decl: VarDecl, kind: VarKind) extends ScopeElem
+case class VarInfo(name: String, mangled: irt.Ident, decl: VarDecl, kind: VarKind) extends ScopeElem
 case class MethodInfo(name: String, decl: MethodDecl, kind: VarKind=Method) extends ScopeElem
 case class ClassInfo(name: String, decl: ClassDecl, kind: VarKind=Class) extends ScopeElem
 case class LibraryMethod(name: String) extends ScopeElem {
@@ -23,6 +26,10 @@ trait Scope {
   val errorHanlder: ErrorHandler
 
   var scope: ScopeT = MMap.empty
+
+  val mangler = new Mangler
+
+  val utils = new Utils(Map.empty, errorHanlder)
 
   def addToScope(scopeElem: ScopeElem): Unit = {
     val sym = scopeElem.name
@@ -53,8 +60,18 @@ trait Scope {
 
   def getScopeElems(members: List[Tree]): List[ScopeElem] = {
     members.collect {
-      case vd: VarDecl => VarInfo(vd.name.str, vd, vd.kind)
-      case md: MethodDecl => MethodInfo(md.name.str, md, Method)
+      case vd: VarDecl =>
+        val pos = utils.getPosition(vd)
+        val mangledName = vd.kind match {
+          case LocalVar    => mangler.encodeLocalSym(vd.symbol)(pos)
+          case Param       => mangler.encodeParamIdent(vd.symbol)(pos)
+          case ClassMember => mangler.encodeFieldSym(vd.symbol)(pos)
+          case _           => irt.Ident(vd.symbol.toString)(pos)
+        }
+        VarInfo(vd.name.str, mangledName, vd, vd.kind)
+
+      case md: MethodDecl =>
+        MethodInfo(md.name.str, md, Method)
     }
   }
 
