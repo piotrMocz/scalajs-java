@@ -54,6 +54,7 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
   /** Compile a type encoded as an AST attribute */
   def compileType(tpe: Type)(implicit pos: Position): irtpe.Type = tpe match {
     case tp: JExprType            => compileJavaType(tp)
+    case AnyType                  => irtpe.AnyType
     case StatementType | NullType => irtpe.NoType
   }
 
@@ -124,16 +125,6 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
       errorHanlder.fail(pos.line, Some("compileType"),
         s"Missing implementation (trying to compile: $tpe)", Fatal)
       null
-  }
-
-  def enclosingClassType(tpe: Type)(implicit pos: Position): irtpe.Type = {
-    tpe match {
-      case StatementType | NullType =>
-        irtpe.NoType
-
-      case JExprType(jtype) =>
-        compileType(JExprType(jtype.getEnclosingType))
-    }
   }
 
 }

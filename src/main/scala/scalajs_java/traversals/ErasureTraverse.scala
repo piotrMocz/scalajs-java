@@ -80,9 +80,18 @@ class ErasureTraverse(val errorHandler: ErrorHandler) extends Traverse {
     val elTypeOpt = newArray.elemType.map(eraseTypeTree)
 
     elTypeOpt match {
-      case elTpe: Option[Expr] => super.traverse(newArray.copy(elemType = elTpe)(newArray.pos))
-      case _                    => throw new Exception(
-        s"[TypeParamsTraverse -- NewClass] Unexpected type: $elTypeOpt")
+      case Some(tpExpr) => tpExpr match {
+        case tpExpr: Expr =>
+          super.traverse(newArray.copy(elemType = Some(tpExpr)) (newArray.pos) )
+
+        case _ =>
+          throw new Exception(
+            s"[TypeParamsTraverse -- NewClass] Unexpected type: $elTypeOpt")
+      }
+
+      case _ =>
+        throw new Exception(
+          s"[TypeParamsTraverse -- NewClass] Unexpected type: $elTypeOpt")
     }
   }
 

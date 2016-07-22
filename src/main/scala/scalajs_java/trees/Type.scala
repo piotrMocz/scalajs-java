@@ -9,7 +9,6 @@ object Type {
   def getTypeFromTree(tree: Tree): Type = tree match {
     case NullLiteral() => NullType
     case expr: Expr    => expr.tp
-    case AnyTypeTree() => AnyType
     case _             => StatementType
   }
 

@@ -293,7 +293,7 @@ class Compiler(val inits: Map[String, Expr],
           case Some(VarInfo(_, mangledName, _, _)) =>
             mangledName
 
-          case None =>
+          case _ =>
             if (sym.isLocal) mangler.encodeLocalSym(sym)
             else mangler.encodeFieldSym(sym)
         }
@@ -399,6 +399,9 @@ class Compiler(val inits: Map[String, Expr],
         ???
 
       case expr: PrimitiveTypeTree =>
+        ???
+
+      case expr: AnyTypeTree =>
         ???
 
       case expr: Literal =>
