@@ -3,6 +3,8 @@ package scalajs_java.trees
 import com.sun.tools.javac.code.Type.JCPrimitiveType
 import com.sun.tools.javac.code.{TypeTag, Type => JType}
 
+import scalajs_java.utils.Predicates
+
 sealed trait Type
 
 object Type {
@@ -13,6 +15,10 @@ object Type {
   }
 
   def eq(tp1: Type, tp2: Type): Boolean = (tp1, tp2) match {
+    case (t1, t2) if Predicates.isTypeParameter(t1) ||
+      Predicates.isTypeParameter(t2) =>
+      true
+
     case (StatementType, StatementType) =>
       true
 

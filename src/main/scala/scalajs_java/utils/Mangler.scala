@@ -133,6 +133,9 @@ class Mangler {
     (encodedName, paramsString)
   }
 
+  def eraseTypeString(typeStr: String): String =
+    typeStr.takeWhile(_ != '<)  // TODO make it better
+
   def encodeStaticMemberSym(sym: Symbol)(implicit pos: Position): irt.Ident = {
     require(sym.isStatic,
       "encodeStaticMemberSym called with non-static symbol: " + sym)
@@ -160,7 +163,8 @@ class Mangler {
 
   def encodeClassFullName(sym: Symbol): String = {
     Definitions.encodeClassName(
-      sym.flatName() + (if (needsModuleClassSuffix(sym)) "$" else ""))
+      eraseTypeString(sym.flatName()) +
+          (if (needsModuleClassSuffix(sym)) "$" else ""))
   }
 
   def encodeParamIdent(sym: Symbol)(implicit pos: Position): irt.Ident = {
@@ -243,18 +247,24 @@ class Mangler {
     else mangleObjectType(jtype)
 
   def mangleType(tp: Type): String = tp match {
-    case StatementType | NullType => ""
-    case AnyType                  => "O"
-    case tp: JExprType            => mangleJType(tp.jtype)
+    case tpe if Predicates.isTypeParameter(tpe) => "O"
+    case StatementType | NullType               => ""
+    case AnyType                                => "O"
+    case tp: JExprType                          => mangleJType(tp.jtype)
   }
 
   // TODO this TypedTree class hierarchy is not very good, rethink
-  def mangleType(typeTree: Tree): String = typeTree match {
-    case t: PrimitiveTypeTree => manglePrimitiveType(t.typeTag)
-    case t: ArrayTypeTree     => "A" + mangleType(t.elemType)
-    case t: Ident             => encodeClassFullName(t.symbol) // TODO, but it may be safe to assume it's a class here
-    case t: TypedTree         => mangleType(t.tp)
-    case _                    => throw new Exception("Cannot mangle names without types")
+  def mangleType(typeTree: Tree): String = {
+    typeTree match {
+      case t: TypedTree if Predicates.isTypeParameter(t.tp)
+                                => "O"
+      case t: PrimitiveTypeTree => manglePrimitiveType(t.typeTag)
+      case t: ArrayTypeTree     => "A" + mangleType(t.elemType)
+      case t: Ident             => encodeClassFullName(t.symbol) // TODO, but it may be safe to assume it's a class here
+      case t: TypedTree         => mangleType(t.tp)
+      case t: TypeApply         => mangleType(t.tpe)
+      case _                    => throw new Exception("Cannot mangle names without types")
+    }
   }
 
   def arrayTypeTag(tString: String): String = {

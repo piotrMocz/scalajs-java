@@ -1,6 +1,7 @@
 package scalajs_java.compiler
 
-import org.scalajs.core.ir.{Position}
+import com.sun.tools.javac.code.TypeTag
+import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 
 import scalajs_java.Config
 import scalajs_java.compiler.passes.ConstructorPass.ConstructorsT
@@ -63,6 +64,25 @@ object Utils {
 
   def getPosition(tree: Tree): Position =  tree.pos match {
     case scalajs_java.trees.Position(line) => Position(Position.SourceFile(Config.testFilePath), line, 0)
+  }
+
+  def adapt(tree: irt.Tree, targetType: irtpe.Type)(
+    implicit pos: Position): irt.Tree = targetType match {
+    case refTpe: irtpe.ReferenceType =>
+      irt.AsInstanceOf(tree, refTpe)
+
+    case _ =>
+      irt.Unbox(tree, typeTag(targetType))
+  }
+
+  def typeTag(tpe: irtpe.Type): Char = tpe match {
+    case irtpe.BooleanType => 'Z'
+    case irtpe.DoubleType  => 'D'
+    case irtpe.FloatType   => 'F'
+    case irtpe.IntType     => 'I'
+    case irtpe.LongType    => 'J'
+    case _                 => throw new Exception(
+      s"[typeTag] unknown tag")
   }
 
 }

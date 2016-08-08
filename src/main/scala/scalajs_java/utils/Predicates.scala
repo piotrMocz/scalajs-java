@@ -112,4 +112,26 @@ object Predicates {
     case _             => false
   }
 
+  def isTypeParameter(tpe: Type): Boolean = tpe match {
+    case JExprType(jtype) =>
+      if (jtype.tsym.owner == null) false
+      else jtype.tsym.owner.`type`.isParameterized
+
+    case _ =>
+      false
+  }
+
+  def isErasedParameter(tpe: Type): Boolean = tpe match {
+    case JExprType(jtype) =>
+      jtype.tsym.toString.isEmpty || jtype.tsym.toString.equals("<any>")
+
+    case _ =>
+      false
+  }
+
+  def isGenericType(tpe: Type): Boolean = tpe match {
+    case JExprType(jtype) => jtype.isParameterized
+    case _                => false
+  }
+
 }

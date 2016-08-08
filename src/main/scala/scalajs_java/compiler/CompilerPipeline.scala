@@ -1,14 +1,13 @@
 package scalajs_java.compiler
 
 import scala.language.postfixOps
-
 import com.sun.tools.javac.tree.JCTree.JCCompilationUnit
 import org.scalajs.core.ir.Trees
 import org.scalajs.core.tools.logging.{NullLogger, ScalaConsoleLogger}
 import org.scalajs.jsenv.ConsoleJSConsole
 
 import scala.collection.JavaConversions._
-import scalajs_java.{CompilerInterface, Config, Linker, Runner}
+import scalajs_java._
 import scalajs_java.compiler.passes._
 import scalajs_java.utils.{CompilerPhase, ErrorHandler, Fatal, Scope}
 
