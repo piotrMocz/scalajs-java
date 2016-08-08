@@ -67,12 +67,17 @@ object Utils {
   }
 
   def adapt(tree: irt.Tree, targetType: irtpe.Type)(
-    implicit pos: Position): irt.Tree = targetType match {
-    case refTpe: irtpe.ReferenceType =>
-      irt.AsInstanceOf(tree, refTpe)
+    implicit pos: Position): irt.Tree = {
+    if (tree.tpe.equals(irtpe.AnyType) &&
+        !targetType.equals(irtpe.AnyType)) targetType match {
+      case refTpe: irtpe.ReferenceType =>
+        irt.AsInstanceOf(tree, refTpe)
 
-    case _ =>
-      irt.Unbox(tree, typeTag(targetType))
+      case _ =>
+        irt.Unbox(tree, typeTag(targetType))
+    } else {
+      tree
+    }
   }
 
   def typeTag(tpe: irtpe.Type): Char = tpe match {

@@ -78,6 +78,11 @@ object Predicates {
       false
   }
 
+  def isPrimitiveType(tpe: Type): Boolean = tpe match {
+    case JExprType(jtype) => jtype.isPrimitive
+    case _                => false
+  }
+
   def isStringType(tpe: Type): Boolean = tpe match {
     case JExprType(jtype) => jtype.toString == "java.lang.String"
     case _                => false

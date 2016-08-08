@@ -72,7 +72,12 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
     if (mainObjects.isEmpty)
       errorHandler.fail(0, Some("run"), "No main class detected", Fatal)
 
-    (defsObjNames._1.flatten, mainObjects.head)
+    val flatDefs = defsObjNames._1.flatten
+    val adaptedDefs = flatDefs.map { fd =>
+      new AdaptPass(verbose).run(fd)
+    }
+
+    (adaptedDefs, mainObjects.head)
   }
 
   def run(project: String): Unit = {
