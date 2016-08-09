@@ -45,7 +45,7 @@ class MultifileRunTest {
     val mainClassSource = wrapperMainClass(mainCode, pkgName)
     val sources = classes.map(cls => wrapperClass(cls._1, cls._2, pkgName))
     val allSources = mainClassSource :: sources
-    val allClassNames = "Test" :: classes.map(_._1)
+    val allClassNames = "Test" :: classes.map(_._1.takeWhile(_ != '<'))
 
     val javaCompiler = new CompilerInterface()
     javaCompiler.compileVirtualProject(allClassNames, allSources)
@@ -294,5 +294,79 @@ class MultifileRunTest {
           """
             |static int x;
           """.stripMargin)))
+  }
+
+  @Test def runGenericFields(): Unit = {
+    assertRun("42",
+      """
+        |Test2<int> test2 = new Test2<int>(42);
+        |System.out.println(test2.y);
+      """.stripMargin,
+      List(
+        ("Test2<T>",
+          """
+            |T y;
+            |
+            |Test2(T y) {
+            |  this.y = y;
+            |}
+          """.stripMargin)))
+
+    assertRun("42",
+      """
+        |Test3 test3 = new Test3(42);
+        |Test2<Test3> test2 = new Test2<Test3>(test3);
+        |System.out.println(test2.y.x);
+      """.stripMargin,
+      List(
+        ("Test2<T>",
+          """
+            |T y;
+            |
+            |Test2(T y) {
+            |  this.y = y;
+            |}
+          """.stripMargin),
+        ("Test3",
+          """
+            |int x;
+            |
+            |Test3(int x) {
+            |  this.x = x;
+            |}
+          """.stripMargin)))
+  }
+
+  @Test def runGenericBinops(): Unit = {
+//    assertRun("55",
+//      """
+//        |Test2<int> test2 = new Test2<int>(42);
+//        |System.out.println(test2.y + 13);
+//      """.stripMargin,
+//      List(
+//        ("Test2<T>",
+//          """
+//            |T y;
+//            |
+//            |Test2(T y) {
+//            |  this.y = y;
+//            |}
+//          """.stripMargin)))
+
+    assertRun("55",
+      """
+        |Test2<int> test2 = new Test2<int>(42);
+        |System.out.println(test2.y + test2.y);
+      """.stripMargin,
+      List(
+        ("Test2<T>",
+          """
+            |T y;
+            |
+            |Test2(T y) {
+            |  this.y = y;
+            |}
+          """.stripMargin)))
+
   }
 }
