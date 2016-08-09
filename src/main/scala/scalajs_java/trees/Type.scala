@@ -8,6 +8,17 @@ import scalajs_java.utils.Predicates
 sealed trait Type
 
 object Type {
+  val autoboxedTypes: Set[String] = Set(
+    "java.lang.Boolean",
+    "java.lang.Char",
+    "java.lang.Integer",
+    "java.lang.Long",
+    "java.lang.Short",
+    "java.lang.Byte",
+    "java.lang.Float",
+    "java.lang.Double"
+  )
+
   def getTypeFromTree(tree: Tree): Type = tree match {
     case NullLiteral() => NullType
     case expr: Expr    => expr.tp

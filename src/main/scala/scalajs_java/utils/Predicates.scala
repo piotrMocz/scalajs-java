@@ -78,9 +78,17 @@ object Predicates {
       false
   }
 
-  def isPrimitiveType(tpe: Type): Boolean = tpe match {
-    case JExprType(jtype) => jtype.isPrimitive
+  def isAutoboxedType(tpe: Type): Boolean = tpe match {
+    case JExprType(jtype) => Type.autoboxedTypes.contains(jtype.tsym.toString)
     case _                => false
+  }
+
+  def isPrimitiveType(tpe: Type): Boolean = {
+    if (isAutoboxedType(tpe)) true
+    else tpe match {
+      case JExprType(jtype) => jtype.isPrimitive
+      case _                => false
+    }
   }
 
   def isStringType(tpe: Type): Boolean = tpe match {

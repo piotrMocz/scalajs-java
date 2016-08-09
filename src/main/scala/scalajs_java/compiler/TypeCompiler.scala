@@ -45,11 +45,42 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
     irtpe.ArrayType(tTag, dims)
   }
 
+  def compileAutoboxedType(tpe: Type): irtpe.Type = tpe match {
+    case JExprType(jtype) => jtype.tsym.toString match {
+      case "java.lang.Boolean" =>
+        irtpe.BooleanType
+
+      case "java.lang.Char"    | "java.lang.Byte" |
+           "java.lang.Integer" | "java.lang.Short" =>
+        irtpe.IntType
+
+      case "java.lang.Float" =>
+        irtpe.FloatType
+
+      case "java.lang.Double" =>
+        irtpe.DoubleType
+
+      case "java.lang.Long" =>
+        irtpe.LongType
+
+      case _ =>
+        errorHanlder.fail(0, Some("compileAutoboxedType"),
+          s"Unreconized java type: $jtype", Fatal)
+        irtpe.NoType
+    }
+
+    case _ =>
+      errorHanlder.fail(0, Some("compileAutoboxedType"),
+        s"Unreconized type: $tpe", Fatal)
+      irtpe.NoType
+  }
+
   def compileJavaType(tpe: JExprType)(implicit pos: Position): irtpe.Type = {
     if (tpe.jtype.isPrimitiveOrVoid) compilePrimitiveType(tpe.jtype.getTag)
     else if (isArrayType(tpe)) compileArrayType(tpe.jtype)
     else if (Predicates.isTypeParameter(tpe)) irtpe.AnyType
     else if (Predicates.isErasedParameter(tpe)) irtpe.AnyType
+    else if (Predicates.isAutoboxedType(tpe)) compileAutoboxedType(tpe)
     else compileClassType(tpe.jtype)
   }
 
@@ -111,6 +142,9 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
       case t: TypedTree if Predicates.isTypeParameter(t.tp) =>
         irtpe.AnyType
 
+      case t: TypedTree if Predicates.isAutoboxedType(t.tp) =>
+        compileAutoboxedType(t.tp)
+
       case PrimitiveTypeTree(_, tTag, _) =>
         compilePrimitiveType(tTag)
 
@@ -135,5 +169,4 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
         null
     }
   }
-
 }

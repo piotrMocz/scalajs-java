@@ -19,10 +19,17 @@ class OpCompiler(errorHanlder: ErrorHandler) {
   }
 
   def primitiveOp(tLeft: Type, tRight: Type): Boolean = {
-    Predicates.isPrimitiveType(tLeft) &&
-        (Predicates.isTypeParameter(tRight) || Predicates.isErasedParameter(tRight)) ||
-        Predicates.isPrimitiveType(tRight) &&
-            (Predicates.isTypeParameter(tLeft) || Predicates.isErasedParameter(tLeft))
+    val leftPrimitiveLike =
+      Predicates.isPrimitiveType(tLeft) ||
+      Predicates.isTypeParameter(tLeft) ||
+      Predicates.isErasedParameter(tLeft)
+
+    val rightPrimitiveLike =
+      Predicates.isPrimitiveType(tRight) ||
+      Predicates.isTypeParameter(tRight) ||
+      Predicates.isErasedParameter(tRight)
+
+    leftPrimitiveLike && rightPrimitiveLike
   }
 
   private def primTypeOp(op: Tag, tTag: TypeTag): Int = {
@@ -131,13 +138,11 @@ class OpCompiler(errorHanlder: ErrorHandler) {
     (tpeLeft, tpeRight) match {
 
       case (tLeft, tRight) if primitiveOp(tLeft, tRight) =>
-        val jtype =
-          if (Predicates.isPrimitiveType(tLeft))
-            tLeft.asInstanceOf[JExprType].jtype
-          else
-            tRight.asInstanceOf[JExprType].jtype
+        val tpe =
+          if (Predicates.isPrimitiveType(tLeft)) tLeft
+          else tRight
 
-        primTypeOp(op, jtype.getTag)
+        primTypeOp(op, Utils.getJavaTypeTag(tpe))
 
       case (typeLeft, typeRight) if stringOp(typeLeft, typeRight) &&
           op == Tag.PLUS =>

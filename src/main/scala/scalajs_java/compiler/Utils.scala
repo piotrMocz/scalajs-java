@@ -7,7 +7,7 @@ import scalajs_java.Config
 import scalajs_java.compiler.passes.ConstructorPass.ConstructorsT
 import scalajs_java.trees._
 import scalajs_java.utils.Scope.ClassMapT
-import scalajs_java.utils.{ErrorHandler, Fatal}
+import scalajs_java.utils.{ErrorHandler, Fatal, Predicates}
 
 class Utils(val classes: ClassMapT,
             val errorHandler: ErrorHandler) {
@@ -90,4 +90,35 @@ object Utils {
       s"[typeTag] unknown tag")
   }
 
+  def getJavaTypeTag(tpe: Type): TypeTag = tpe match {
+    case JExprType(jtype) if Predicates.isAutoboxedType(tpe) =>
+      jtype.tsym.toString match {
+        case "java.lang.Boolean" =>
+          TypeTag.BOOLEAN
+
+        case "java.lang.Char" =>
+          TypeTag.CHAR
+
+        case "java.lang.Byte" => TypeTag.BYTE
+
+        case "java.lang.Integer" => TypeTag.INT
+
+        case "java.lang.Short" => TypeTag.SHORT
+
+        case "java.lang.Float" => TypeTag.FLOAT
+
+        case "java.lang.Double" => TypeTag.DOUBLE
+
+        case "java.lang.Long" => TypeTag.LONG
+
+        case _ => throw new Exception(
+          s"No type tag for type: $jtype")
+      }
+
+    case JExprType(jtype) =>
+      jtype.getTag
+
+    case _ => throw new Exception(
+      s"Type $tpe is not an autoboxed type")
+  }
 }
