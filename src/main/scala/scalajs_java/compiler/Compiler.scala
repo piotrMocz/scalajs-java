@@ -342,7 +342,7 @@ class Compiler(val inits: Map[String, Expr],
       val ownerType = irtpe.ClassType(mangler.encodeClassFullName(fieldAcc.symbol.owner))
       val adaptedQual = irt.AsInstanceOf(qualifier, ownerType)
       irt.Select(adaptedQual, item)(tpe)
-    } else if (generic && Predicates.isAutoboxedType(fieldAcc.tp)) {
+    } else if (generic && exprPos && Predicates.isAutoboxedType(fieldAcc.tp)) {
       val select = irt.Select(qualifier, item)(tpe)
       val origType = typeCompiler.compileType(fieldAcc.tp)
       val tTag = Utils.typeTag(origType)

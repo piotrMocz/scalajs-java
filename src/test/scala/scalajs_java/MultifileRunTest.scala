@@ -299,7 +299,7 @@ class MultifileRunTest {
   @Test def runGenericFields(): Unit = {
     assertRun("42",
       """
-        |Test2<int> test2 = new Test2<int>(42);
+        |Test2<Integer> test2 = new Test2<Integer>(42);
         |System.out.println(test2.y);
       """.stripMargin,
       List(
@@ -311,6 +311,22 @@ class MultifileRunTest {
             |  this.y = y;
             |}
           """.stripMargin)))
+
+    assertRun("42",
+      """
+        |Test2<Integer> test2 = new Test2<Integer>(0);
+        |test2.y = 42;
+        |System.out.println(test2.y);
+      """.stripMargin,
+      List(
+        ("Test2<T>",
+            """
+              |T y;
+              |
+              |Test2(T y) {
+              |  this.y = y;
+              |}
+            """.stripMargin)))
 
     assertRun("42",
       """
@@ -337,25 +353,93 @@ class MultifileRunTest {
           """.stripMargin)))
   }
 
-  @Test def runGenericBinops(): Unit = {
-//    assertRun("55",
-//      """
-//        |Test2<int> test2 = new Test2<int>(42);
-//        |System.out.println(test2.y + 13);
-//      """.stripMargin,
-//      List(
-//        ("Test2<T>",
-//          """
-//            |T y;
-//            |
-//            |Test2(T y) {
-//            |  this.y = y;
-//            |}
-//          """.stripMargin)))
+  @Test def runGenericFields2(): Unit = {
+    assertRun("42",
+      """
+        |Test2<Integer> test2 = new Test2<Integer>(42);
+        |int x = test2.y;
+        |System.out.println(x);
+      """.stripMargin,
+      List(
+        ("Test2<T>",
+            """
+              |T y;
+              |
+              |Test2(T y) {
+              |  this.y = y;
+              |}
+            """.stripMargin)))
 
+    assertRun("42",
+      """
+        |Test3 test3 = new Test3(42);
+        |Test2<Test3> test2 = new Test2<Test3>(test3);
+        |int x = test2.y.x;
+        |System.out.println(x);
+      """.stripMargin,
+      List(
+        ("Test2<T>",
+            """
+              |T y;
+              |
+              |Test2(T y) {
+              |  this.y = y;
+              |}
+            """.stripMargin),
+        ("Test3",
+            """
+              |int x;
+              |
+              |Test3(int x) {
+              |  this.x = x;
+              |}
+            """.stripMargin)))
+
+    assertRun("42",
+      """
+        |Test3 test3 = new Test3(42);
+        |Test2<Test3> test2 = new Test2<Test3>(test3);
+        |Test3 t3 = test2.y;
+        |System.out.println(t3.x);
+      """.stripMargin,
+      List(
+        ("Test2<T>",
+            """
+              |T y;
+              |
+              |Test2(T y) {
+              |  this.y = y;
+              |}
+            """.stripMargin),
+        ("Test3",
+            """
+              |int x;
+              |
+              |Test3(int x) {
+              |  this.x = x;
+              |}
+            """.stripMargin)))
+  }
+
+  @Test def runGenericBinops(): Unit = {
     assertRun("55",
       """
-        |Test2<int> test2 = new Test2<int>(42);
+        |Test2<Integer> test2 = new Test2<Integer>(42);
+        |System.out.println(test2.y + 13);
+      """.stripMargin,
+      List(
+        ("Test2<T>",
+          """
+            |T y;
+            |
+            |Test2(T y) {
+            |  this.y = y;
+            |}
+          """.stripMargin)))
+
+    assertRun("84",
+      """
+        |Test2<Integer> test2 = new Test2<Integer>(42);
         |System.out.println(test2.y + test2.y);
       """.stripMargin,
       List(
