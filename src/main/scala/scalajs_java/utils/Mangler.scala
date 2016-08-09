@@ -262,7 +262,6 @@ class Mangler {
       case t: ArrayTypeTree     => "A" + mangleType(t.elemType)
       case t: Ident             => encodeClassFullName(t.symbol) // TODO, but it may be safe to assume it's a class here
       case t: TypedTree         => mangleType(t.tp)
-      case t: TypeApply         => mangleType(t.tpe)
       case _                    => throw new Exception("Cannot mangle names without types")
     }
   }

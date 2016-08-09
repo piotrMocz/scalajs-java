@@ -32,3 +32,4 @@ Right now we can compile:
 * method invocation in general (although `println` is the only supported library method right now)
 * static method invocation
 * using multiple files in a project/compiling projects (this has limitations for now)
+* generic classes (e.g. `class Test<T> { /* ... */ }`)
