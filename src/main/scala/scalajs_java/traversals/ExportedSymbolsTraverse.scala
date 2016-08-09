@@ -16,7 +16,7 @@ class ExportedSymbolsTraverse(errHandler: ErrorHandler) extends Traverse with Sc
         MethodInfo(md.name.str, md, kind = Method)
 
       case vd: VarDecl if Predicates.isField(vd) && Predicates.isPrivate(vd) =>
-        VarInfo(vd.name.str, vd, kind = ClassMember)
+        VarInfo(vd.name.str, null, vd, kind = ClassMember)
     }
   }
 
@@ -27,6 +27,8 @@ class ExportedSymbolsTraverse(errHandler: ErrorHandler) extends Traverse with Sc
       val expMethods = getMemberInfos(classDecl.members)
       expMethods.foreach(addToScope)
     }
+
+    addToScope(ClassInfo(classDecl.name, classDecl))
 
     classDecl.copy()
   }

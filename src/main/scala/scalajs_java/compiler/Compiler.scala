@@ -8,11 +8,14 @@ import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 
 import scalajs_java.compiler.passes.ConstructorPass.ConstructorsT
 import scalajs_java.trees._
+import scalajs_java.utils.Scope.ClassMapT
 import scalajs_java.utils._
 
 
-/** Main compiler. */
+/** Main compiler.
+  * TODO remove the constructors pass (take that info from `classes`. */
 class Compiler(val inits: Map[String, Expr],
+               val classes: ClassMapT,
                val constructors: ConstructorsT,
                val errorHanlder: ErrorHandler) {
 
@@ -31,7 +34,7 @@ class Compiler(val inits: Map[String, Expr],
 
   val typeCompiler = new TypeCompiler(mangler, errorHanlder)
   
-  val utils = new Utils(typeCompiler, errorHanlder)
+  val utils = new Utils(classes, errorHanlder)
 
   // Compiling constructors
 
@@ -43,7 +46,7 @@ class Compiler(val inits: Map[String, Expr],
     */
   def compileConstructorStmt(className: irt.Ident, classType: irtpe.ClassType,
       superClassType: irtpe.ClassType, stmt: Statement): irt.Tree = {
-    implicit val pos = utils.getPosition(stmt)
+    implicit val pos = Utils.getPosition(stmt)
 
     if (Predicates.isSuperCall(stmt)) {
       stmt match {
@@ -71,7 +74,7 @@ class Compiler(val inits: Map[String, Expr],
     * */
   def compileConstructor(className: irt.Ident, classType: irtpe.ClassType,
       superClassType: irtpe.ClassType, methodDecl: MethodDecl): irt.MethodDef = {
-    implicit val pos = utils.getPosition(methodDecl)
+    implicit val pos = Utils.getPosition(methodDecl)
 
     val constrName = mangler.encodeMethod(methodDecl)
     // helper func to capture the names:
@@ -81,8 +84,8 @@ class Compiler(val inits: Map[String, Expr],
 
     val retType = methodDecl.retType.map(typeCompiler.compileType).getOrElse(irtpe.NoType)
     val params = methodDecl.params.map(compileParam)
-    val defVal = methodDecl.defVal.map(compileExpr)
-    val thrown = methodDecl.thrown.map(compileExpr)
+    val defVal = methodDecl.defVal.map(compileExpr(_, exprPos = true))
+    val thrown = methodDecl.thrown.map(compileExpr(_, exprPos = true))
     val recvParam = methodDecl.recvParam.map(compileStatement)
     val typeParams = methodDecl.typeParams.map(compileTree)
 
@@ -94,7 +97,7 @@ class Compiler(val inits: Map[String, Expr],
   // Compiling methods
 
   def compileParam(param: VarDecl): irt.ParamDef = {
-    implicit val pos = utils.getPosition(param)
+    implicit val pos = Utils.getPosition(param)
     val name = irt.Ident(param.name)   // mangler.encodeLocalSym(param.symbol)
     val ptpe = typeCompiler.compileType(param.varType)
 
@@ -102,7 +105,7 @@ class Compiler(val inits: Map[String, Expr],
   }
 
   def compileParamRef(paramRef: Expr): irt.Tree = {
-    implicit val pos = utils.getPosition(paramRef)
+    implicit val pos = Utils.getPosition(paramRef)
     paramRef match {
       case Ident(sym, name, tp, _, _) =>
         val ident = irt.Ident(name)
@@ -118,14 +121,14 @@ class Compiler(val inits: Map[String, Expr],
   }
 
   def compileMethodDecl(methodDecl: MethodDecl): irt.MethodDef = {
-    implicit val pos = utils.getPosition(methodDecl)
+    implicit val pos = Utils.getPosition(methodDecl)
     val name = mangler.encodeMethod(methodDecl) // irt.Ident(mangler.mangleMethodName(methodDecl))
     val retType = methodDecl.retType.map(typeCompiler.compileType).getOrElse(irtpe.NoType)
     val params = methodDecl.params.map(compileParam)
     val body = compileTree(methodDecl.body)
-    val defVal = methodDecl.defVal.map(compileExpr)
+    val defVal = methodDecl.defVal.map(compileExpr(_, exprPos = true))
     // methodDecl.modifiers
-    val thrown = methodDecl.thrown.map(compileExpr)
+    val thrown = methodDecl.thrown.map(compileExpr(_, exprPos = true))
     val recvParam = methodDecl.recvParam.map(compileStatement)
     val typeParams = methodDecl.typeParams.map(compileTree)
 
@@ -136,7 +139,7 @@ class Compiler(val inits: Map[String, Expr],
   // Compiling classes
 
   def compileFieldDef(varDecl: VarDecl): irt.FieldDef = {
-    implicit val pos = utils.getPosition(varDecl)
+    implicit val pos = Utils.getPosition(varDecl)
     val name = mangler.encodeFieldSym(varDecl.symbol)
     val tpe = typeCompiler.compileType(varDecl.varType)
 //    val modifiers = varDecl.mods
@@ -156,7 +159,7 @@ class Compiler(val inits: Map[String, Expr],
 
     case Some(_) =>
       errorHanlder.fail(pos.line, Some("compileExtendsClause"),
-        "extends clause of unknown form (expected: Identifier)", Normal)
+        "extends clause of unknown form (expected: Identifier)", Fatal)
       (irt.Ident(""), irtpe.ClassType(""))
 
     case None =>
@@ -174,11 +177,11 @@ class Compiler(val inits: Map[String, Expr],
 
   def compileStaticFieldInitializer(varDecl: VarDecl,
         classType: irtpe.ClassType): Option[irt.Tree] = {
-    implicit val pos = utils.getPosition(varDecl)
+    implicit val pos = Utils.getPosition(varDecl)
 
     val name = mangler.encodeFieldSym(varDecl.symbol)
     val tpe = typeCompiler.compileType(varDecl.varType)
-    val init = inits.get(varDecl.name.str).map(compileExpr)
+    val init = inits.get(varDecl.name.str).map(compileExpr(_, exprPos = true))
 
     init.map(Definitions.staticAssignment(classType, name, _))
   }
@@ -187,7 +190,7 @@ class Compiler(val inits: Map[String, Expr],
     * all the static methods of `classDecl`. Instead of putting it inside the
     * compiled ast, we store it in a list and join it later. */
   def compileCompanionObject(classDecl: ClassDecl): Unit = {
-    implicit val pos = utils.getPosition(classDecl)
+    implicit val pos = Utils.getPosition(classDecl)
 
     val oldName = classDecl.name.str
     val className = encodeClassName(oldName) + "$"
@@ -236,7 +239,7 @@ class Compiler(val inits: Map[String, Expr],
 
   /** Returns both the class and its companion object */
   def compileClassDecl(classDecl: ClassDecl): irt.ClassDef = {
-    implicit val pos = utils.getPosition(classDecl)
+    implicit val pos = Utils.getPosition(classDecl)
 
 //    if (isMainClass(classDecl)) compileMainClass(classDecl)
 
@@ -270,11 +273,11 @@ class Compiler(val inits: Map[String, Expr],
   // Compile low-level nodes
 
   def compileLocalVar(varDecl: VarDecl): irt.VarDef = {
-    implicit val pos = utils.getPosition(varDecl)
+    implicit val pos = Utils.getPosition(varDecl)
     val name = mangler.encodeLocalSym(varDecl.symbol)
 
     val tpe = typeCompiler.compileType(varDecl.varType)
-    val init = varDecl.init.map(compileExpr).getOrElse(irtpe.zeroOf(tpe))
+    val init = varDecl.init.map(compileExpr(_, exprPos = true)).getOrElse(irtpe.zeroOf(tpe))
 //    val modifiers = varDecl.mods
 //    val nameExpr = varDecl.nameExpr.map(compileExpr).getOrElse(
 //      irtpe.zeroOf(tpe))
@@ -283,11 +286,18 @@ class Compiler(val inits: Map[String, Expr],
   }
 
   def compileSelectIdent(expr: Expr): irt.Ident = {
-    implicit val pos = utils.getPosition(expr)
+    implicit val pos = Utils.getPosition(expr)
     expr match {
-      case Ident(sym, _, _, _, _) =>
-        if (sym.isLocal) mangler.encodeLocalSym(sym)
-        else mangler.encodeFieldSym(sym) // TODO
+      case Ident(sym, _, _, refVar, _) =>
+        refVar match {
+          case Some(VarInfo(_, mangledName, _, _)) =>
+            mangledName
+
+          case _ =>
+            if (sym.isLocal) mangler.encodeLocalSym(sym)
+            else mangler.encodeFieldSym(sym)
+        }
+
 
       case _ =>
         errorHanlder.fail(pos.line, Some("compileSelectIdent"),
@@ -296,14 +306,14 @@ class Compiler(val inits: Map[String, Expr],
     }
   }
 
-  def compileFieldAccessQualifier(selected: Expr)(
+  def compileFieldAccessQualifier(selected: Expr, exprPos: Boolean)(
       implicit pos : Position): irt.Tree = selected match {
     case ident: Ident =>
       val classType = typeCompiler.compileType(selected.tp)
       irt.VarRef(compileSelectIdent(ident))(classType)
 
     case fa: FieldAccess =>
-      compileFieldAccess(fa)
+      compileFieldAccess(fa, exprPos)
 
     case _ =>
       errorHanlder.fail(pos.line, Some("compileFieldAccessQualifier"),
@@ -311,25 +321,39 @@ class Compiler(val inits: Map[String, Expr],
       irt.Skip()
   }
 
-  def compileFieldAccess(fieldAcc: FieldAccess): irt.Select = {
-    implicit val pos = utils.getPosition(fieldAcc)
+  def compileFieldAccess(fieldAcc: FieldAccess, exprPos: Boolean): irt.Tree = {
+    implicit val pos = Utils.getPosition(fieldAcc)
 
     val item = mangler.encodeFieldSym(fieldAcc.symbol)
     val classType = typeCompiler.compileType(fieldAcc.selected.tp)
-    val tpe = typeCompiler.compileType(fieldAcc.tp)
+    val generic = Predicates.isGenericType(fieldAcc.selected.tp)
+    val tpe = if (generic) irtpe.AnyType else typeCompiler.compileType(fieldAcc.tp)
+
     val qualifier =
       if (Predicates.isThisSelect(fieldAcc))
         irt.This()(classType)
       else if (Predicates.isStatic(fieldAcc))
         irt.LoadModule(irtpe.ClassType(classType.show() + "$"))
       else
-        compileFieldAccessQualifier(fieldAcc.selected)
+        compileFieldAccessQualifier(fieldAcc.selected, exprPos)
 
-    irt.Select(qualifier, item)(tpe)
+    if (exprPos && fieldAcc.symbol.owner != null &&
+        qualifier.tpe.equals(irtpe.AnyType)) {
+      val ownerType = irtpe.ClassType(mangler.encodeClassFullName(fieldAcc.symbol.owner))
+      val adaptedQual = irt.AsInstanceOf(qualifier, ownerType)
+      irt.Select(adaptedQual, item)(tpe)
+    } else if (generic && exprPos && Predicates.isAutoboxedType(fieldAcc.tp)) {
+      val select = irt.Select(qualifier, item)(tpe)
+      val origType = typeCompiler.compileType(fieldAcc.tp)
+      val tTag = Utils.typeTag(origType)
+      irt.Unbox(select, tTag)
+    } else {
+      irt.Select(qualifier, item)(tpe)
+    }
   }
 
   def compileStaticAccess(ident: Ident, varDecl: VarDecl): irt.Tree = {
-    implicit val pos = utils.getPosition(ident)
+    implicit val pos = Utils.getPosition(ident)
 
     val item = mangler.encodeFieldSym(ident.symbol)
     val classType = irtpe.ClassType(encodeClassName(ident.enclClass.get) + "$")
@@ -340,20 +364,18 @@ class Compiler(val inits: Map[String, Expr],
   }
 
   def compileIdent(ident: Ident): irt.Tree = {
-    implicit val pos = utils.getPosition(ident)
+    implicit val pos = Utils.getPosition(ident)
     val sym = ident.symbol
     val tpe = typeCompiler.compileType(ident.tp)
     ident.refVar match {
-      case Some(VarInfo(_, vd, ClassMember)) if Predicates.isStatic(vd) =>
+      case Some(VarInfo(_, mangledIdent, vd, ClassMember)) if Predicates.isStatic(vd) =>
         compileStaticAccess(ident, vd)
 
-      case Some(VarInfo(_, _, LocalVar)) =>
-        val name = mangler.encodeLocalSym(sym)
-        irt.VarRef(name)(tpe)
+      case Some(VarInfo(_, mangledIdent, vDecl, LocalVar)) =>
+        irt.VarRef(mangledIdent)(tpe)
 
-      case Some(VarInfo(_, _, Param)) =>
-        val name = mangler.encodeParamIdent(sym)
-        irt.VarRef(name)(tpe)
+      case Some(VarInfo(_, mangledIdent, vDecl, Param)) =>
+        irt.VarRef(mangledIdent)(tpe)
 
       case _ =>
         val name = irt.Ident(ident.name)
@@ -363,8 +385,8 @@ class Compiler(val inits: Map[String, Expr],
 
   // Compiling higher-level nodes
 
-  def compileExpr(expr: Expr): irt.Tree = {
-    implicit val pos = utils.getPosition(expr)
+  def compileExpr(expr: Expr, exprPos: Boolean): irt.Tree = {
+    implicit val pos = Utils.getPosition(expr)
     expr match {
       case expr: LetExpr =>
         ???
@@ -385,12 +407,15 @@ class Compiler(val inits: Map[String, Expr],
         ???
 
       case expr: TypeApply =>
-        ???
+        irt.EmptyTree // TODO
 
       case expr: ArrayTypeTree =>
         ???
 
       case expr: PrimitiveTypeTree =>
+        ???
+
+      case expr: AnyTypeTree =>
         ???
 
       case expr: Literal =>
@@ -400,11 +425,11 @@ class Compiler(val inits: Map[String, Expr],
         compileIdent(expr)
 
       case expr: FieldAccess =>
-        compileFieldAccess(expr)
+        compileFieldAccess(expr, exprPos)
 
       case ArrayAccess(arrRef, indexExpr, tp) =>
-        val arrRefC = compileExpr(arrRef)
-        val indexExprC = compileExpr(indexExpr)
+        val arrRefC = compileExpr(arrRef, exprPos)
+        val indexExprC = compileExpr(indexExpr, exprPos)
 //        val tTag = mangler.mangledTypeName(tp)
         val tpC = typeCompiler.compileType(tp)
 
@@ -417,15 +442,15 @@ class Compiler(val inits: Map[String, Expr],
         ???
 
       case Binary(op, left, right, tp) =>
-        val opC = opCompiler.compileBinopCode(op, left.tp)
-        val leftC = compileExpr(left)
-        val rightC = compileExpr(right)
+        val opC = opCompiler.compileBinopCode(op, left.tp, right.tp)
+        val leftC = compileExpr(left, exprPos = true)
+        val rightC = compileExpr(right, exprPos = true)
 
         irt.BinaryOp(opC, leftC, rightC)
 
       case Unary(op, arg, tp) =>
-        val opC = opCompiler.compileBinopCode(op, arg.tp)
-        val argC = compileExpr(arg)
+        val opC = opCompiler.compileBinopCode(op, arg.tp, arg.tp)
+        val argC = compileExpr(arg, exprPos = true)
         val binOpC = irt.BinaryOp(opC, argC, irt.IntLiteral(1))
         val assignC = irt.Assign(argC, binOpC)
 
@@ -451,17 +476,17 @@ class Compiler(val inits: Map[String, Expr],
         ???
 
       case Assign(lhs, rhs, _) =>
-        val lhsC = compileExpr(lhs)
-        val rhsC = compileExpr(rhs)
+        val lhsC = compileExpr(lhs, exprPos = false)
+        val rhsC = compileExpr(rhs, exprPos = true)
         val assignment = irt.Assign(lhsC, rhsC)
 
         irt.Block(assignment, lhsC)
 
       case Parens(expr, _) =>
-        compileExpr(expr)  // ???
+        compileExpr(expr, exprPos)  // ???
 
       case NewArray(_, _, dims, initializers, elemType, tp) =>
-        val initializersC = initializers.map(compileExpr)
+        val initializersC = initializers.map(compileExpr(_, exprPos = true))
         val typeInfo = mangler.arrayTypeInfo(tp)
         val ndims = if (dims.isEmpty) 1 else dims.length
 
@@ -469,7 +494,7 @@ class Compiler(val inits: Map[String, Expr],
           val arrType = irtpe.ArrayType(typeInfo._2, ndims)
           irt.ArrayValue(arrType, initializersC)
         } else {
-          val dimsC = dims.map(compileExpr)
+          val dimsC = dims.map(compileExpr(_, exprPos = true))
           irt.NewArray(irtpe.ArrayType(typeInfo._2, ndims), dimsC)
         }
 
@@ -484,15 +509,15 @@ class Compiler(val inits: Map[String, Expr],
   }
 
   def compilePolyExpr(polyExpr: PolyExpr): irt.Tree = {
-    implicit val pos = utils.getPosition(polyExpr)
+    implicit val pos = Utils.getPosition(polyExpr)
     polyExpr match {
       case polyExpr: MethodInv =>
         compileMethodInv(polyExpr)
 
       case Conditional(cond, thenp, elsep, tpe) =>
-        val condC = compileExpr(cond)
-        val thenpC = compileExpr(thenp)
-        val elsepC = compileExpr(elsep)
+        val condC = compileExpr(cond, exprPos = true)
+        val thenpC = compileExpr(thenp, exprPos = true)
+        val elsepC = compileExpr(elsep, exprPos = true)
         val tpeC = typeCompiler.compileType(tpe)
 
         irt.If(condC, thenpC, elsepC)(tpeC)
@@ -500,7 +525,7 @@ class Compiler(val inits: Map[String, Expr],
       case nc@NewClass(ident, tArgs, args, clsBody, enclExpr, tp) =>
         val clsC = typeCompiler.compileClassType(ident)
         val ctor = utils.getMatchingConstructor(nc, constructors)
-        val argsC = args.map(compileExpr)
+        val argsC = args.map(compileExpr(_, exprPos = true))
         val ctorName = mangler.encodeMethod(ctor)
 
         irt.New(clsC, ctorName, argsC)
@@ -517,7 +542,7 @@ class Compiler(val inits: Map[String, Expr],
 
   def compileMethodSelect(methodSel: Expr, args: List[Tree],
     refDecl: Option[ScopeElem], tp: Type): irt.Tree = {
-    implicit val pos = utils.getPosition(methodSel)
+    implicit val pos = Utils.getPosition(methodSel)
 
     refDecl match {
       case Some(methodInfo@MethodInfo(_, _, _)) =>
@@ -535,7 +560,7 @@ class Compiler(val inits: Map[String, Expr],
               else if (isStatic)
                   irt.LoadModule(irtpe.ClassType(classType.show() + "$"))
               else
-                compileFieldAccessQualifier(fa.selected)
+                compileFieldAccessQualifier(fa.selected, exprPos = true)
 
             irt.Apply(qualifier, methodName, argsC)(tpC)
 
@@ -571,7 +596,7 @@ class Compiler(val inits: Map[String, Expr],
   }
 
   def compileMethodInv(methodInv: MethodInv): irt.Tree = {
-    implicit val pos = utils.getPosition(methodInv)
+    implicit val pos = Utils.getPosition(methodInv)
 
     if (Predicates.isPrintMethodInv(methodInv)) {
       val body = compileTree(methodInv.args.head)
@@ -584,7 +609,7 @@ class Compiler(val inits: Map[String, Expr],
 
 
   def compileLiteral(lit: Literal): irt.Literal = {
-    implicit val pos = utils.getPosition(lit)
+    implicit val pos = Utils.getPosition(lit)
     lit match {
       case BooleanLiteral(value, _) =>
         irt.BooleanLiteral(value)
@@ -616,7 +641,7 @@ class Compiler(val inits: Map[String, Expr],
   }
 
   def compileStatement(stmt: Statement): irt.Tree = {
-    implicit val pos = utils.getPosition(stmt)
+    implicit val pos = Utils.getPosition(stmt)
     stmt match {
       case stmt: VarDecl =>
         stmt.kind match {
@@ -633,6 +658,11 @@ class Compiler(val inits: Map[String, Expr],
             errorHanlder.fail(pos.line, Some("compileStatement: VarDecl"),
               "Expected: Method declaration, got: Variable Declaration", Normal)
             irt.EmptyTree
+
+          case Class =>
+            errorHanlder.fail(pos.line, Some("compileStatement: VarDecl"),
+              "Expected: Method declaration, got: Class Declaration", Normal)
+            irt.EmptyTree
         }
 
       case stmt: ClassDecl =>
@@ -643,12 +673,12 @@ class Compiler(val inits: Map[String, Expr],
         ??? // TODO
 
       case stmt: Throw =>
-        val expr = compileExpr(stmt.expr)
+        val expr = compileExpr(stmt.expr, exprPos = true)
 
         irt.Throw(expr)
 
       case stmt: Return =>
-        val expr = stmt.expr.map(compileExpr).getOrElse(irt.Undefined())
+        val expr = stmt.expr.map(compileExpr(_, exprPos = true)).getOrElse(irt.Undefined())
         irt.Return(expr)
 
       case stmt: Continue =>
@@ -660,12 +690,12 @@ class Compiler(val inits: Map[String, Expr],
         ??? // TODO
 
       case ExprStatement(expr) =>
-        compileExpr(expr)
+        compileExpr(expr, exprPos = false)
 
       case If(cond, thenp, elsep) =>
-        val condC = compileExpr(cond)
+        val condC = compileExpr(cond, exprPos = true)
         val thenpC = compileStatement(thenp)
-        val elsepC = elsep.map(compileStatement).getOrElse(irt.EmptyTree)
+        val elsepC = elsep.map(compileStatement).getOrElse(irt.Undefined())
         val tpe = irtpe.NoType  // in Java if won't ever be in expression position
 
         irt.If(condC, thenpC, elsepC)(tpe)
@@ -699,13 +729,13 @@ class Compiler(val inits: Map[String, Expr],
         ???
 
       case WhileLoop(cond, body) =>
-        val condC = compileExpr(cond)
+        val condC = compileExpr(cond, exprPos = true)
         val bodyC = compileStatement(body)
 
         irt.While(condC, bodyC)
 
       case DoWhileLoop(cond, body) =>
-        val condC = compileExpr(cond)
+        val condC = compileExpr(cond, exprPos = true)
         val bodyC = compileStatement(body)
 
         irt.DoWhile(bodyC, condC)
@@ -723,7 +753,7 @@ class Compiler(val inits: Map[String, Expr],
 
   /** Compile an expression tree into an IR `Tree`. */
   def compileTree(tree: Tree): irt.Tree = {
-    implicit val pos = utils.getPosition(tree)
+    implicit val pos = Utils.getPosition(tree)
     tree match {
       case tree: Import =>
         compileImport(tree)
@@ -738,7 +768,7 @@ class Compiler(val inits: Map[String, Expr],
         ???
 
       case tree: Expr =>
-        compileExpr(tree)
+        compileExpr(tree, exprPos = true)
 
       case tree: Statement =>
         compileStatement(tree)
@@ -756,7 +786,7 @@ class Compiler(val inits: Map[String, Expr],
   }
 
   def compile(compilationUnit: CompilationUnit): (List[irt.ClassDef], Option[String]) = {
-    implicit val pos = utils.getPosition(compilationUnit)
+    implicit val pos = Utils.getPosition(compilationUnit)
 
     companionObjects = Nil
 

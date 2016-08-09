@@ -37,7 +37,7 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
   }
 
   def compileClassType(tpe: JType): irtpe.Type =
-    mangler.encodeClassType(tpe.tsym)
+    mangler.encodeClassType(Symbol.fromJava(tpe.tsym))
 
   def compileArrayType(tpe: JType)(implicit pos: Position): irtpe.Type = {
     val tTag = mangler.arrayTypeTag(tpe.toString)
@@ -45,16 +45,52 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
     irtpe.ArrayType(tTag, dims)
   }
 
+  def compileAutoboxedType(tpe: Type): irtpe.Type = tpe match {
+    case JExprType(jtype) => jtype.tsym.toString match {
+      case "java.lang.Boolean" =>
+        irtpe.BooleanType
+
+      case "java.lang.Char"    | "java.lang.Byte" |
+           "java.lang.Integer" | "java.lang.Short" =>
+        irtpe.IntType
+
+      case "java.lang.Float" =>
+        irtpe.FloatType
+
+      case "java.lang.Double" =>
+        irtpe.DoubleType
+
+      case "java.lang.Long" =>
+        irtpe.LongType
+
+      case _ =>
+        errorHanlder.fail(0, Some("compileAutoboxedType"),
+          s"Unreconized java type: $jtype", Fatal)
+        irtpe.NoType
+    }
+
+    case _ =>
+      errorHanlder.fail(0, Some("compileAutoboxedType"),
+        s"Unreconized type: $tpe", Fatal)
+      irtpe.NoType
+  }
+
   def compileJavaType(tpe: JExprType)(implicit pos: Position): irtpe.Type = {
     if (tpe.jtype.isPrimitiveOrVoid) compilePrimitiveType(tpe.jtype.getTag)
     else if (isArrayType(tpe)) compileArrayType(tpe.jtype)
+    else if (Predicates.isTypeParameter(tpe)) irtpe.AnyType
+    else if (Predicates.isErasedParameter(tpe)) irtpe.AnyType
+    else if (Predicates.isAutoboxedType(tpe)) compileAutoboxedType(tpe)
     else compileClassType(tpe.jtype)
   }
 
   /** Compile a type encoded as an AST attribute */
-  def compileType(tpe: Type)(implicit pos: Position): irtpe.Type = tpe match {
-    case tp: JExprType          => compileJavaType(tp)
-    case StatementType | NoType => irtpe.NoType
+  def compileType(tpe: Type)(implicit pos: Position): irtpe.Type = {
+    tpe match {
+      case tp: JExprType            => compileJavaType(tp)
+      case AnyType                  => irtpe.AnyType
+      case StatementType | NullType => irtpe.NoType
+    }
   }
 
   def getArrayDims(tpe: JType)(implicit pos: Position): Int = {
@@ -90,44 +126,47 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
     case fa: FieldAccess =>
       mangler.encodeClassType(fa.symbol)
 
+    case ta: TypeApply =>
+      compileClassType(ta.tpe)
+
     case _ =>
       errorHanlder.fail(pos.line, Some("compileClassType"),
         s"[compileClassType] Not a class type tree: ${typeTree.toString}",
-        Normal)
+        Fatal)
       irtpe.ClassType("")
   }
 
   /** Compile a type encoded as an AST node */
-  def compileType(tpe: Tree)(implicit pos: Position): irtpe.Type = tpe match {
-    case PrimitiveTypeTree(_, tTag, _) =>
-      compilePrimitiveType(tTag)
-
-    case aType@ArrayTypeTree(elemType, _) =>
-      val dims = getArrayDims(aType)
-      val tname = mangler.mangleType(getArrayElemType(elemType))
-      irtpe.ArrayType(tname, dims)
-
-    case ident: Ident =>
-      if (ident.symbol.toString == "java.lang.String") irtpe.StringType
-      else compileClassType(ident)  // TODO there're more cases, I guess
-
-    case fa: FieldAccess =>
-      compileClassType(fa)
-
-    case _ =>
-      errorHanlder.fail(pos.line, Some("compileType"),
-        s"Missing implementation (trying to compile: $tpe)", Fatal)
-      null
-  }
-
-  def enclosingClassType(tpe: Type)(implicit pos: Position): irtpe.Type = {
+  def compileType(tpe: Tree)(implicit pos: Position): irtpe.Type = {
     tpe match {
-      case StatementType | NoType =>
-        irtpe.NoType
+      case t: TypedTree if Predicates.isTypeParameter(t.tp) =>
+        irtpe.AnyType
 
-      case JExprType(jtype) =>
-        compileType(JExprType(jtype.getEnclosingType))
+      case t: TypedTree if Predicates.isAutoboxedType(t.tp) =>
+        compileAutoboxedType(t.tp)
+
+      case PrimitiveTypeTree(_, tTag, _) =>
+        compilePrimitiveType(tTag)
+
+      case aType@ArrayTypeTree(elemType, _) =>
+        val dims = getArrayDims(aType)
+        val tname = mangler.mangleType(getArrayElemType(elemType))
+        irtpe.ArrayType(tname, dims)
+
+      case ident: Ident =>
+        if (ident.symbol.toString == "java.lang.String") irtpe.StringType
+        else compileClassType(ident)  // TODO there're more cases, I guess
+
+      case fa: FieldAccess =>
+        compileClassType(fa)
+
+      case ta: TypeApply =>
+        compileClassType(ta.tpe)
+
+      case _ =>
+        errorHanlder.fail(pos.line, Some("compileType"),
+          s"Missing implementation (trying to compile: $tpe)", Fatal)
+        null
     }
   }
-
 }

@@ -76,6 +76,8 @@ trait Traverse {
       arrayTypeTree.pos)
   }
 
+  def traverse(classLiteral: ClassLiteral): ClassLiteral = classLiteral
+
   def traverse(literal: Literal): Literal = literal
 
   def traverse(ident: Ident): Ident = ident

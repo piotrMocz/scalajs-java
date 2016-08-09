@@ -1,14 +1,13 @@
 package scalajs_java.compiler
 
 import scala.language.postfixOps
-
 import com.sun.tools.javac.tree.JCTree.JCCompilationUnit
 import org.scalajs.core.ir.Trees
 import org.scalajs.core.tools.logging.{NullLogger, ScalaConsoleLogger}
 import org.scalajs.jsenv.ConsoleJSConsole
 
 import scala.collection.JavaConversions._
-import scalajs_java.{CompilerInterface, Config, Linker, Runner}
+import scalajs_java._
 import scalajs_java.compiler.passes._
 import scalajs_java.utils.{CompilerPhase, ErrorHandler, Fatal, Scope}
 
@@ -35,9 +34,14 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
 
     val opTrees2 = treesScopes._1
     val scope = Scope.mkScope(treesScopes._2)
+    val classes = Scope.getClasses(scope)
 
     val taggedTrees = opTrees2.map { ot =>
       new RefTagPass(verbose, scope).run(ot)
+    }
+
+    val erasedTrees = taggedTrees.map { tt =>
+      new ErasurePass(verbose).run(tt)
     }
 
     val fullTrees = taggedTrees.map { tt =>
@@ -57,7 +61,7 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
     })
 
     val irs = (fullTrees zip initLists).map { ft =>
-      new CompilerPass(ft._2, constructors, verbose).run(ft._1)
+      new CompilerPass(ft._2, classes, constructors, verbose).run(ft._1)
     }
 
     val defsObjNames = irs.unzip
@@ -68,7 +72,12 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
     if (mainObjects.isEmpty)
       errorHandler.fail(0, Some("run"), "No main class detected", Fatal)
 
-    (defsObjNames._1.flatten, mainObjects.head)
+    val flatDefs = defsObjNames._1.flatten
+    val adaptedDefs = flatDefs.map { fd =>
+      new AdaptPass(verbose).run(fd)
+    }
+
+    (adaptedDefs, mainObjects.head)
   }
 
   def run(project: String): Unit = {

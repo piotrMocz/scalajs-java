@@ -13,7 +13,7 @@ package scalajs_java.utils
 
 import javax.lang.model.`type`.TypeKind
 
-import com.sun.tools.javac.code.{Symbol, TypeTag, Type => JType}
+import com.sun.tools.javac.code.{TypeTag, Type => JType}
 import org.scalajs.core.ir.{Definitions, Position, Trees => irt, Types => irtpe}
 
 import scala.collection.mutable.{Map => MMap, Set => MSet}
@@ -92,7 +92,7 @@ class Mangler {
         "f"
 
     val encodedName = name + "$" + idSuffix
-    irt.Ident(mangleJSName(encodedName), Some(sym.flatName().toString))
+    irt.Ident(mangleJSName(encodedName), Some(sym.flatName()))
   }
 
   def encodeMethod(mDecl: MethodDecl, reflProxy: Boolean = false)
@@ -133,18 +133,21 @@ class Mangler {
     (encodedName, paramsString)
   }
 
+  def eraseTypeString(typeStr: String): String =
+    typeStr.takeWhile(_ != '<)  // TODO make it better
+
   def encodeStaticMemberSym(sym: Symbol)(implicit pos: Position): irt.Ident = {
     require(sym.isStatic,
       "encodeStaticMemberSym called with non-static symbol: " + sym)
     irt.Ident(
       mangleJSName(encodeMemberNameInternal(sym)) +
           // makeParamsString(List(internalName(sym.`type`))),
-      Some(sym.flatName().toString))
+      Some(sym.flatName()))
   }
 
   def encodeLocalSym(sym: Symbol)(implicit pos: Position): irt.Ident = {
     require(sym.isLocal, "encodeLocalSym called with non-local symbol: " + sym)
-    irt.Ident(localSymbolName(sym), Some(sym.flatName().toString))
+    irt.Ident(localSymbolName(sym), Some(sym.flatName()))
   }
 
   // TODO
@@ -155,12 +158,13 @@ class Mangler {
     irtpe.ClassType(encodeClassFullName(sym))
 
   def encodeClassFullNameIdent(sym: Symbol)(implicit pos: Position): irt.Ident = {
-    irt.Ident(encodeClassFullName(sym), Some(sym.flatName().toString))
+    irt.Ident(encodeClassFullName(sym), Some(sym.flatName()))
   }
 
   def encodeClassFullName(sym: Symbol): String = {
     Definitions.encodeClassName(
-      sym.flatName() + (if (needsModuleClassSuffix(sym)) "$" else ""))
+      eraseTypeString(sym.flatName()) +
+          (if (needsModuleClassSuffix(sym)) "$" else ""))
   }
 
   def encodeParamIdent(sym: Symbol)(implicit pos: Position): irt.Ident = {
@@ -232,9 +236,9 @@ class Mangler {
 
   // TODO
   private def mangleObjectType(jtype: JType): String = {
-    val tsym = jtype.tsym
+    val tsym = Symbol.fromJava(jtype.tsym)
     if (jtype.getTag == TypeTag.ARRAY) "A" + mangleJType(jtype.allparams().head)
-    else if (tsym.toString == "java.lang.String")  "T"
+    else if (tsym.name == "java.lang.String")  "T"
     else encodeClassFullName(tsym)
   }
 
@@ -243,16 +247,23 @@ class Mangler {
     else mangleObjectType(jtype)
 
   def mangleType(tp: Type): String = tp match {
-    case StatementType | NoType => ""
-    case tp: JExprType          => mangleJType(tp.jtype)
+    case tpe if Predicates.isTypeParameter(tpe) => "O"
+    case StatementType | NullType               => ""
+    case AnyType                                => "O"
+    case tp: JExprType                          => mangleJType(tp.jtype)
   }
 
   // TODO this TypedTree class hierarchy is not very good, rethink
-  def mangleType(typeTree: Tree): String = typeTree match {
-    case t: PrimitiveTypeTree => manglePrimitiveType(t.typeTag)
-    case t: ArrayTypeTree     => "A" + mangleType(t.elemType)
-    case t: TypedTree         => mangleType(t.tp)
-    case _                    => throw new Exception("Cannot mangle names without types")
+  def mangleType(typeTree: Tree): String = {
+    typeTree match {
+      case t: TypedTree if Predicates.isTypeParameter(t.tp)
+                                => "O"
+      case t: PrimitiveTypeTree => manglePrimitiveType(t.typeTag)
+      case t: ArrayTypeTree     => "A" + mangleType(t.elemType)
+      case t: Ident             => encodeClassFullName(t.symbol) // TODO, but it may be safe to assume it's a class here
+      case t: TypedTree         => mangleType(t.tp)
+      case _                    => throw new Exception("Cannot mangle names without types")
+    }
   }
 
   def arrayTypeTag(tString: String): String = {

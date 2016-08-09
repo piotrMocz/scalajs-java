@@ -78,9 +78,33 @@ object Predicates {
       false
   }
 
+  def isAutoboxedType(tpe: Type): Boolean = tpe match {
+    case JExprType(jtype) => Type.autoboxedTypes.contains(jtype.tsym.toString)
+    case _                => false
+  }
+
+  def isPrimitiveType(tpe: Type): Boolean = {
+    if (isAutoboxedType(tpe)) true
+    else tpe match {
+      case JExprType(jtype) => jtype.isPrimitive
+      case _                => false
+    }
+  }
+
   def isStringType(tpe: Type): Boolean = tpe match {
     case JExprType(jtype) => jtype.toString == "java.lang.String"
     case _                => false
+  }
+
+  def isClassType(tpe: Type): Boolean = tpe match {
+    case JExprType(jtype) => !jtype.isPrimitive
+    case NullType         => true
+    case _                => false
+  }
+
+  def isNullType(tpe: Type): Boolean = tpe match {
+    case NullType => true
+    case _        => false
   }
 
   def isMethod(tree: Tree) = tree match {
@@ -99,6 +123,28 @@ object Predicates {
   def isNull(tree: Tree) = tree match {
     case NullLiteral() => true
     case _             => false
+  }
+
+  def isTypeParameter(tpe: Type): Boolean = tpe match {
+    case JExprType(jtype) =>
+      if (jtype.tsym.owner == null) false
+      else jtype.tsym.owner.`type`.isParameterized
+
+    case _ =>
+      false
+  }
+
+  def isErasedParameter(tpe: Type): Boolean = tpe match {
+    case JExprType(jtype) =>
+      jtype.tsym.toString.isEmpty || jtype.tsym.toString.equals("<any>")
+
+    case _ =>
+      false
+  }
+
+  def isGenericType(tpe: Type): Boolean = tpe match {
+    case JExprType(jtype) => jtype.isParameterized
+    case _                => false
   }
 
 }

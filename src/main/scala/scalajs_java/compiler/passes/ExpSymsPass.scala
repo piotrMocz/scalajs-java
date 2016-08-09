@@ -6,7 +6,7 @@ import scalajs_java.utils.Scope.ScopeT
 import scalajs_java.utils.{CompilerPhase, ErrorHandler}
 
 
-class ExpSymsPass(verb: Boolean)
+class ExpSymsPass(verb: Boolean=false)
     extends Pass[CompilationUnit, CompilationUnit] {
 
   override val verbose: Boolean = verb

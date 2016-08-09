@@ -47,6 +47,11 @@ public class JTreeVisitor extends JCTree.Visitor {
         if (tree instanceof JCTree.JCExpression &&
                 tree.type != null) {
             printInd("TYPE: " + tree.type.toString());
+            printInd("Type parameters: " + tree.type.getParameterTypes());
+            printInd("Type args: " + tree.type.getTypeArguments());
+            printInd("Base type: " + tree.type.baseType());
+            printInd("Is parametrized: " + tree.type.isParameterized());
+            printInd("Is type parameter: " + tree.type.tsym.owner.type.isParameterized());
         }
     }
 
