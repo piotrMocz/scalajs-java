@@ -312,8 +312,8 @@ class Compiler(val inits: Map[String, Expr],
       val classType = typeCompiler.compileType(selected.tp)
       irt.VarRef(compileSelectIdent(ident))(classType)
 
-    case fa: FieldAccess =>
-      compileFieldAccess(fa, exprPos)
+    case expr: Expr =>
+      compileExpr(expr, exprPos)
 
     case _ =>
       errorHanlder.fail(pos.line, Some("compileFieldAccessQualifier"),

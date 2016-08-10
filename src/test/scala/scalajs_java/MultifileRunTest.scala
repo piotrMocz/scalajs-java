@@ -453,4 +453,39 @@ class MultifileRunTest {
           """.stripMargin)))
 
   }
+
+  @Test def runObjectArrays(): Unit = {
+    assertRun("42",
+      """
+        |Test2 test2 = new Test2(42);
+        |Test2[] testArr = new Test2[1];
+        |testArr[0] = test2;
+        |System.out.println(testArr[0].x);
+      """.stripMargin,
+      List(
+      ("Test2",
+        """
+          |int x;
+          |
+          |Test2(int x) {
+          |  this.x = x;
+          |}
+        """.stripMargin)))
+
+    assertRun("42",
+      """
+        |Test2 test2 = new Test2(42);
+        |Test2[] testArr = { test2 };
+        |System.out.println(testArr[0].x);
+      """.stripMargin,
+      List(
+        ("Test2",
+          """
+            |int x;
+            |
+            |Test2(int x) {
+            |  this.x = x;
+            |}
+          """.stripMargin)))
+  }
 }

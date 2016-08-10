@@ -266,6 +266,9 @@ class Mangler {
     }
   }
 
+  def objectArrayTag(tString: String): String =
+    Definitions.encodeClassName(tString.takeWhile(_ != '['))
+
   def arrayTypeTag(tString: String): String = {
     if (tString.startsWith("bool[]")) "Z"
     else if (tString.startsWith("byte[]")) "B"
@@ -275,8 +278,7 @@ class Mangler {
     else if (tString.startsWith("int[]")) "I"
     else if (tString.startsWith("long[]")) "J"
     else if (tString.startsWith("short[]")) "S"
-    else throw new Exception(
-      s"[arrayTypeTag] type is not primitive: $tString")
+    else objectArrayTag(tString)
   }
 
   def arrayTypeInfo(tString: String): (String, String) = {
@@ -289,8 +291,8 @@ class Mangler {
       else if (tString.startsWith("int[]")) "Int"
       else if (tString.startsWith("long[]")) "Long"
       else if (tString.startsWith("short[]")) "Short"
-      else throw new Exception(
-        s"[scalaPrimitiveTypeName] type is not primitive: $tString")
+      else objectArrayTag(tString)
+
     val tTag = arrayTypeTag(tString)
 
     (tName, tTag)
