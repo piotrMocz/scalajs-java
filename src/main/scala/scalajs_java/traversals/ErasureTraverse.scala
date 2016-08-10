@@ -1,5 +1,7 @@
 package scalajs_java.traversals
 
+import com.sun.tools.javac.code.TypeTag
+
 import scala.collection.mutable.{Map => MMap}
 import scalajs_java.trees._
 import scalajs_java.utils.ErrorHandler
@@ -50,8 +52,21 @@ class ErasureTraverse(val errorHandler: ErrorHandler) extends Traverse {
       // create our own type hierarchy
       JExprType(jtype)
 
+    case tp =>
+      tp
+  }
+
+  def exprFromType(tpe: Type)(implicit pos: Position): Expr = tpe match {
+    case JExprType(jtype) if jtype.isPrimitive =>
+      PrimitiveTypeTree(jtype.getKind, jtype.getTag, tpe)
+
+    case JExprType(jtype) if jtype.isNullOrReference =>
+      val sym = Symbol.fromJava(jtype.tsym)
+      Ident(sym, Name(jtype.tsym.toString), tpe, None, None)
+
     case _ =>
-      null
+      throw new Exception(s"[ErasureTraverse -- treeFromType]" +
+          s"cannot convert type $tpe back to a tree")
   }
 
   override def traverse(classDecl: ClassDecl): ClassDecl = {
@@ -93,24 +108,17 @@ class ErasureTraverse(val errorHandler: ErrorHandler) extends Traverse {
   // TODO Annotation
 
   override def traverse(newArray: NewArray): NewArray = {
-    val elTypeOpt = newArray.elemType.map(eraseTypeTree)
-    val erType = eraseType(newArray.tp)
+    implicit val pos: Position = newArray.pos
+    val elTypeOpt1 = newArray.elemType.map(et => eraseTypeTree(et).asInstanceOf[Expr])
+    val elTypeOpt2 = newArray.initializers.headOption.map(hd => exprFromType(eraseType(hd.tp)))
+    val elType = elTypeOpt1.getOrElse(
+      elTypeOpt2.getOrElse(
+        throw new Exception("[ErasureTraverse -- NewArray] failed to determine elem type.")))
 
-    elTypeOpt match {
-      case Some(tpExpr) => tpExpr match {
-        case tpExpr: Expr =>
-          super.traverse(newArray.copy(
-            elemType = Some(tpExpr), tp = erType)(newArray.pos))
+    val erasedType = eraseType(newArray.tp)
 
-        case _ =>
-          throw new Exception(
-            s"[TypeParamsTraverse -- NewClass] Unexpected type: $elTypeOpt")
-      }
-
-      case _ =>
-        throw new Exception(
-          s"[TypeParamsTraverse -- NewClass] Unexpected type: $elTypeOpt")
-    }
+    super.traverse(newArray.copy(
+      elemType = Some(elType), tp = erasedType)(newArray.pos))
   }
 
   override def traverse(ident: Ident): Ident = {
