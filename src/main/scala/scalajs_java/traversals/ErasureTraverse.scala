@@ -34,15 +34,19 @@ class ErasureTraverse(val errorHandler: ErrorHandler) extends Traverse {
     typeParams.contains(ident.name.str)
 
   // TODO more cases
-  def eraseTypeTree(tpe: Tree): Tree = tpe match {
+  def eraseTypeTree(tpe: Tree): Expr = tpe match {
     case ta: TypeApply =>
       eraseTypeTree(ta.tpe)
 
     case ident: Ident if isTypeParam(ident) =>
       AnyTypeTree()(tpe.pos)
 
-    case tp =>
+    case tp: Expr =>
       tp
+
+    case _ =>
+      throw new Exception(s"[ErasureTraverse -- eraseTypeTree]" +
+          s"type has to be Expr, found: $tpe")
   }
 
   def eraseType(tpe: Type): Type = tpe match {
@@ -56,19 +60,6 @@ class ErasureTraverse(val errorHandler: ErrorHandler) extends Traverse {
       tp
   }
 
-  def exprFromType(tpe: Type)(implicit pos: Position): Expr = tpe match {
-    case JExprType(jtype) if jtype.isPrimitive =>
-      PrimitiveTypeTree(jtype.getKind, jtype.getTag, tpe)
-
-    case JExprType(jtype) if jtype.isNullOrReference =>
-      val sym = Symbol.fromJava(jtype.tsym)
-      Ident(sym, Name(jtype.tsym.toString), tpe, None, None)
-
-    case _ =>
-      throw new Exception(s"[ErasureTraverse -- treeFromType]" +
-          s"cannot convert type $tpe back to a tree")
-  }
-
   override def traverse(classDecl: ClassDecl): ClassDecl = {
     addTypeParams(classDecl.typeParams)
 
@@ -79,10 +70,26 @@ class ErasureTraverse(val errorHandler: ErrorHandler) extends Traverse {
     res
   }
 
-  override def traverse(varDecl: VarDecl): VarDecl = {
-    val erVarType = eraseTypeTree(varDecl.varType)
+  override def traverse(varDecl: VarDecl): VarDecl = varDecl.init match {
+    // <ArrayType> arr = { elems... };
+    case Some(NewArray(anns, dimAnns, dims, inits, elemType, tp))
+      if elemType.isEmpty =>
+      implicit val pos = varDecl.pos
+      val newAnns = anns.map(traverse)
+      val newDimAnns = dimAnns.map(l => l.map(traverse))
+      val newDims = dims.map(traverse)
+      val newInits = inits.map(traverse)
+      val elemTypeTree = varDecl.varType.asInstanceOf[ArrayTypeTree]
+      val newElemType = eraseTypeTree(elemTypeTree.elemType)
+      val newArray = NewArray(newAnns, newDimAnns, newDims, newInits, Some(newElemType), tp)
 
-    super.traverse(varDecl.copy(varType = erVarType)(varDecl.pos))
+      VarDecl(varDecl.mods, varDecl.name, varDecl.nameExpr.map(traverse),
+        varDecl.symbol, eraseTypeTree(varDecl.varType), Some(newArray),
+        varDecl.kind)
+
+    case _ =>
+      val erVarType = eraseTypeTree(varDecl.varType)
+      super.traverse(varDecl.copy(varType = erVarType)(varDecl.pos))
   }
 
   override def traverse(newClass: NewClass): NewClass = {
@@ -109,11 +116,9 @@ class ErasureTraverse(val errorHandler: ErrorHandler) extends Traverse {
 
   override def traverse(newArray: NewArray): NewArray = {
     implicit val pos: Position = newArray.pos
-    val elTypeOpt1 = newArray.elemType.map(et => eraseTypeTree(et).asInstanceOf[Expr])
-    val elTypeOpt2 = newArray.initializers.headOption.map(hd => exprFromType(eraseType(hd.tp)))
-    val elType = elTypeOpt1.getOrElse(
-      elTypeOpt2.getOrElse(
-        throw new Exception("[ErasureTraverse -- NewArray] failed to determine elem type.")))
+    val elTypeOpt1 = newArray.elemType.map(et => eraseTypeTree(et))
+    val elType = elTypeOpt1.getOrElse(throw new Exception(
+      "[ErasureTraverse -- NewArray] failed to determine elem type."))
 
     val erasedType = eraseType(newArray.tp)
 

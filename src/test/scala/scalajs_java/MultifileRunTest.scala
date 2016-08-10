@@ -487,5 +487,21 @@ class MultifileRunTest {
             |  this.x = x;
             |}
           """.stripMargin)))
+
+    assertRun("null",
+      """
+        |Test2 test2 = new Test2(42);
+        |Test2[] testArr = { null, test2 };
+        |System.out.println(testArr[0]);
+      """.stripMargin,
+      List(
+        ("Test2",
+          """
+            |int x;
+            |
+            |Test2(int x) {
+            |  this.x = x;
+            |}
+          """.stripMargin)))
   }
 }
