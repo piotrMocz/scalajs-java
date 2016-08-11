@@ -84,6 +84,11 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
 
     val javaCompiler = new CompilerInterface()
     javaCompiler.compileProject(project)
+    if (javaCompiler.errCount > 0) {
+      println()
+      println(javaCompiler.formatErrors())
+      return
+    }
 
     val compResults = runPasses(javaCompiler.compilationUnits.toList)
     val defs = compResults._1
@@ -92,8 +97,8 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
     val linked = Linker.link(defs, new ScalaConsoleLogger)
 
     // Clearly separate the output of the program from the compiling logs
-    println("")
-    println("")
+    println()
+    println()
 
     Runner.run(mainObjectName, linked, NullLogger, ConsoleJSConsole)
   }
