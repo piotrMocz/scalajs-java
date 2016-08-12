@@ -29,26 +29,44 @@ class MultifileRunTest {
        |}
     """.stripMargin
 
-  private def wrapperClass(clsName: String, defs: String,
-                           pkgName: String): String =
+  private def wrapperClass(clsName: String, extendsCl: Option[String],
+                           implementsList: List[String], defs: String,
+                           pkgName: String, interface: Boolean): String = {
+    val extCl = extendsCl match {
+      case Some(e) => s"extends $e"
+      case None    => ""
+    }
+
+    val implList =
+      if (implementsList.nonEmpty) s"implements " + implementsList.mkString(", ")
+      else ""
+
+    val clsType = if (interface) "interface" else "class"
+
     s"""
        |${if (pkgName.isEmpty) "" else "package " + pkgName + ";"}
        |
-       |class $clsName {
+       |$clsType $clsName $extCl $implList {
        |  $defs
        |}
     """.stripMargin
+  }
 
   private def assertRun(expected: Any, mainCode: String,
-                        classes: List[(String, String)],
+                        classes: List[(String, Option[String], List[String], String, Boolean)],
                         pkgName: String=""): Unit = {
     val mainClassSource = wrapperMainClass(mainCode, pkgName)
-    val sources = classes.map(cls => wrapperClass(cls._1, cls._2, pkgName))
+    val sources = classes.map(cls => wrapperClass(cls._1, cls._2, cls._3, cls._4, pkgName, cls._5))
     val allSources = mainClassSource :: sources
     val allClassNames = "Test" :: classes.map(_._1.takeWhile(_ != '<'))
 
     val javaCompiler = new CompilerInterface()
     javaCompiler.compileVirtualProject(allClassNames, allSources)
+    if (javaCompiler.errCount > 0) {
+      println(javaCompiler.formatErrors())
+      fail()
+    }
+
     val compilerPipeline = new CompilerPipeline(verbose = false)
     val compResults = compilerPipeline.runPasses(javaCompiler.compilationUnits.toList)
 
@@ -73,24 +91,24 @@ class MultifileRunTest {
         |Test2 t = new Test2();
         |System.out.println(t.x);
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |int x;
-          """.stripMargin)))
+          """.stripMargin, false)))
 
     assertRun("42",
     """
       |Test2 t = new Test2();
       |System.out.println(t.x);
     """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |int x;
             |
             |Test2() {
             |  this.x = 42;
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
   }
 
   @Test def runStaticFieldAccess(): Unit = {
@@ -98,37 +116,37 @@ class MultifileRunTest {
       """
         |System.out.println(Test2.x);
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |static int x;
-          """.stripMargin)))
+          """.stripMargin, false)))
 
     assertRun("42",
       """
         |Test2.x = 42;
         |System.out.println(Test2.x);
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |static int x;
-          """.stripMargin)))
+          """.stripMargin, false)))
 
     assertRun("42",
       """
         |System.out.println(Test2.test3.x);
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |static Test3 test3 = new Test3(42);
-          """.stripMargin),
-        ("Test3",
+          """.stripMargin, false),
+        ("Test3", None, Nil,
           """
             |int x;
             |
             |Test3(int x) {
             |  this.x = x;
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
   }
 
   @Test def runMethodCall(): Unit = {
@@ -137,31 +155,31 @@ class MultifileRunTest {
         |Test2 t = new Test2();
         |t.foo();
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |void foo() {
             |  System.out.println(42);
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
 
     assertRun("42",
       """
         |Test2 t = new Test2();
         |System.out.println(t.foo());
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |int foo() {
             |  return 42;
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
 
     assertRun("42",
       """
         |Test2 t = new Test2(42);
         |System.out.println(t.foo());
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |int x;
             |
@@ -172,7 +190,7 @@ class MultifileRunTest {
             |int foo() {
             |  return this.x;
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
   }
 
   @Test def runMethodCallPkg(): Unit = {
@@ -181,12 +199,12 @@ class MultifileRunTest {
         |Test2 t = new Test2();
         |t.foo();
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |void foo() {
             |  System.out.println(42);
             |}
-          """.stripMargin)),
+          """.stripMargin, false)),
       "test")
 
     assertRun("42",
@@ -194,12 +212,12 @@ class MultifileRunTest {
         |Test2 t = new Test2();
         |System.out.println(t.foo());
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |int foo() {
             |  return 42;
             |}
-          """.stripMargin)),
+          """.stripMargin, false)),
       "test")
 
     assertRun("42",
@@ -207,7 +225,7 @@ class MultifileRunTest {
         |Test2 t = new Test2(42);
         |System.out.println(t.foo());
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |int x;
             |
@@ -218,7 +236,7 @@ class MultifileRunTest {
             |int foo() {
             |  return this.x;
             |}
-          """.stripMargin)),
+          """.stripMargin, false)),
       "test")
   }
 
@@ -227,37 +245,37 @@ class MultifileRunTest {
       """
         |Test2.foo();
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |static void foo() {
             |  System.out.println(42);
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
 
     assertRun("42",
       """
         |System.out.println(Test2.foo(42));
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |static int foo(int x) {
             |  return x;
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
 
     assertRun("42",
       """
         |Test2.x = 42;
         |Test2.foo();
       """.stripMargin,
-      List(("Test2",
+      List(("Test2", None, Nil,
           """
             |static int x;
             |
             |static void foo() {
             |  System.out.println(Test2.x);
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
   }
 
   @Test def runShadowing(): Unit = {
@@ -269,14 +287,14 @@ class MultifileRunTest {
         |System.out.println(x);
       """.stripMargin,
       List(
-        ("Test2",
+        ("Test2", None, Nil,
           """
             |static int x;
-          """.stripMargin),
-        ("Test3",
+          """.stripMargin, false),
+        ("Test3", None, Nil,
           """
             |static int x;
-          """.stripMargin)))
+          """.stripMargin, false)))
 
     assertRun("79",
       """
@@ -286,14 +304,14 @@ class MultifileRunTest {
         |System.out.println(x + Test2.x + Test3.x);
       """.stripMargin,
       List(
-        ("Test2",
+        ("Test2", None, Nil,
           """
             |static int x;
-          """.stripMargin),
-        ("Test3",
+          """.stripMargin, false),
+        ("Test3", None, Nil,
           """
             |static int x;
-          """.stripMargin)))
+          """.stripMargin, false)))
   }
 
   @Test def runGenericFields(): Unit = {
@@ -303,14 +321,14 @@ class MultifileRunTest {
         |System.out.println(test2.y);
       """.stripMargin,
       List(
-        ("Test2<T>",
+        ("Test2<T>", None, Nil,
           """
             |T y;
             |
             |Test2(T y) {
             |  this.y = y;
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
 
     assertRun("42",
       """
@@ -319,14 +337,14 @@ class MultifileRunTest {
         |System.out.println(test2.y);
       """.stripMargin,
       List(
-        ("Test2<T>",
+        ("Test2<T>", None, Nil,
             """
               |T y;
               |
               |Test2(T y) {
               |  this.y = y;
               |}
-            """.stripMargin)))
+            """.stripMargin, false)))
 
     assertRun("42",
       """
@@ -335,22 +353,22 @@ class MultifileRunTest {
         |System.out.println(test2.y.x);
       """.stripMargin,
       List(
-        ("Test2<T>",
+        ("Test2<T>", None, Nil,
           """
             |T y;
             |
             |Test2(T y) {
             |  this.y = y;
             |}
-          """.stripMargin),
-        ("Test3",
+          """.stripMargin, false),
+        ("Test3", None, Nil,
           """
             |int x;
             |
             |Test3(int x) {
             |  this.x = x;
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
   }
 
   @Test def runGenericFields2(): Unit = {
@@ -361,14 +379,14 @@ class MultifileRunTest {
         |System.out.println(x);
       """.stripMargin,
       List(
-        ("Test2<T>",
+        ("Test2<T>", None, Nil,
             """
               |T y;
               |
               |Test2(T y) {
               |  this.y = y;
               |}
-            """.stripMargin)))
+            """.stripMargin, false)))
 
     assertRun("42",
       """
@@ -378,22 +396,22 @@ class MultifileRunTest {
         |System.out.println(x);
       """.stripMargin,
       List(
-        ("Test2<T>",
+        ("Test2<T>", None, Nil,
             """
               |T y;
               |
               |Test2(T y) {
               |  this.y = y;
               |}
-            """.stripMargin),
-        ("Test3",
+            """.stripMargin, false),
+        ("Test3", None, Nil,
             """
               |int x;
               |
               |Test3(int x) {
               |  this.x = x;
               |}
-            """.stripMargin)))
+            """.stripMargin, false)))
 
     assertRun("42",
       """
@@ -403,22 +421,22 @@ class MultifileRunTest {
         |System.out.println(t3.x);
       """.stripMargin,
       List(
-        ("Test2<T>",
+        ("Test2<T>", None, Nil,
             """
               |T y;
               |
               |Test2(T y) {
               |  this.y = y;
               |}
-            """.stripMargin),
-        ("Test3",
+            """.stripMargin, false),
+        ("Test3", None, Nil,
             """
               |int x;
               |
               |Test3(int x) {
               |  this.x = x;
               |}
-            """.stripMargin)))
+            """.stripMargin, false)))
   }
 
   @Test def runGenericBinops(): Unit = {
@@ -428,14 +446,14 @@ class MultifileRunTest {
         |System.out.println(test2.y + 13);
       """.stripMargin,
       List(
-        ("Test2<T>",
+        ("Test2<T>", None, Nil,
           """
             |T y;
             |
             |Test2(T y) {
             |  this.y = y;
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
 
     assertRun("84",
       """
@@ -443,14 +461,14 @@ class MultifileRunTest {
         |System.out.println(test2.y + test2.y);
       """.stripMargin,
       List(
-        ("Test2<T>",
+        ("Test2<T>", None, Nil,
           """
             |T y;
             |
             |Test2(T y) {
             |  this.y = y;
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
 
   }
 
@@ -463,14 +481,14 @@ class MultifileRunTest {
         |System.out.println(testArr[0].x);
       """.stripMargin,
       List(
-      ("Test2",
+      ("Test2", None, Nil,
         """
           |int x;
           |
           |Test2(int x) {
           |  this.x = x;
           |}
-        """.stripMargin)))
+        """.stripMargin, false)))
 
     assertRun("42",
       """
@@ -479,14 +497,14 @@ class MultifileRunTest {
         |System.out.println(testArr[0].x);
       """.stripMargin,
       List(
-        ("Test2",
+        ("Test2", None, Nil,
           """
             |int x;
             |
             |Test2(int x) {
             |  this.x = x;
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
 
     assertRun("null",
       """
@@ -495,40 +513,105 @@ class MultifileRunTest {
         |System.out.println(testArr[0]);
       """.stripMargin,
       List(
-        ("Test2",
+        ("Test2", None, Nil,
           """
             |int x;
             |
             |Test2(int x) {
             |  this.x = x;
             |}
-          """.stripMargin)))
+          """.stripMargin, false)))
   }
 
-//  @Test def runInheritance(): Unit = {
-//    assertRun("42",
-//      """
-//        |Test3 test3 = new Test3(42);
-//        |Test2<Test3> test2 = new Test2<Test3>(test3);
-//        |Test3 t3 = test2.y;
-//        |System.out.println(t3.x);
-//      """.stripMargin,
-//      List(
-//        ("Test2<T>",
-//          """
-//            |T y;
-//            |
-//            |Test2(T y) {
-//            |  this.y = y;
-//            |}
-//          """.stripMargin),
-//        ("Test3",
-//          """
-//            |int x;
-//            |
-//            |Test3(int x) {
-//            |  this.x = x;
-//            |}
-//          """.stripMargin)))
-//  }
+  @Test def runInheritance(): Unit = {
+    assertRun("42\n13",
+      """
+        |Test3 test3 = new Test3(42);
+        |System.out.println(test3.x);
+        |System.out.println(test3.y);
+      """.stripMargin,
+      List(
+        ("Test2", None, Nil,
+          """
+            |int y;
+            |
+            |Test2(int y) {
+            |  this.y = y;
+            |}
+          """.stripMargin, false),
+        ("Test3", Some("Test2"), Nil,
+          """
+            |int x;
+            |
+            |Test3(int x) {
+            |  super(13);
+            |  this.x = x;
+            |}
+          """.stripMargin, false)))
+
+    assertRun("42\n13",
+      """
+        |Test3 test3 = new Test3();
+        |System.out.println(test3.test3());
+        |System.out.println(test3.test2());
+      """.stripMargin,
+      List(
+        ("Test2", None, Nil,
+          """
+            |int test2() { return 13; }
+          """.stripMargin, false),
+        ("Test3", Some("Test2"), Nil,
+          """
+            |int test3() { return 42; }
+          """.stripMargin, false)))
+  }
+
+  @Test def runPolymorphism(): Unit = {
+    assertRun("child",
+      """
+        |Test2 test3 = new Test3();
+        |System.out.println(test3.test());
+      """.stripMargin,
+      List(
+        ("Test2", None, Nil,
+          """
+            |String test() { return "parent"; }
+          """.stripMargin, false),
+        ("Test3", Some("Test2"), Nil,
+          """
+            |String test() { return "child"; }
+          """.stripMargin, false)))
+  }
+
+  @Test def runInterfaces(): Unit = {
+    assertRun("42",
+      """
+        |Test3 test3 = new Test3();
+        |System.out.println(test3.test());
+      """.stripMargin,
+      List(
+        ("Test2", None, Nil,
+            """
+              |public int test();
+            """.stripMargin, true),
+        ("Test3", None, List("Test2"),
+            """
+              |public int test() { return 42; }
+            """.stripMargin, false)))
+
+    assertRun("42",
+      """
+        |Test2 test3 = new Test3();
+        |System.out.println(test3.test());
+      """.stripMargin,
+      List(
+        ("Test2", None, Nil,
+          """
+            |public int test();
+          """.stripMargin, true),
+        ("Test3", None, List("Test2"),
+          """
+            |public int test() { return 42; }
+          """.stripMargin, false)))
+  }
 }
