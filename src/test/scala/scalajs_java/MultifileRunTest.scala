@@ -504,4 +504,31 @@ class MultifileRunTest {
             |}
           """.stripMargin)))
   }
+
+//  @Test def runInheritance(): Unit = {
+//    assertRun("42",
+//      """
+//        |Test3 test3 = new Test3(42);
+//        |Test2<Test3> test2 = new Test2<Test3>(test3);
+//        |Test3 t3 = test2.y;
+//        |System.out.println(t3.x);
+//      """.stripMargin,
+//      List(
+//        ("Test2<T>",
+//          """
+//            |T y;
+//            |
+//            |Test2(T y) {
+//            |  this.y = y;
+//            |}
+//          """.stripMargin),
+//        ("Test3",
+//          """
+//            |int x;
+//            |
+//            |Test3(int x) {
+//            |  this.x = x;
+//            |}
+//          """.stripMargin)))
+//  }
 }

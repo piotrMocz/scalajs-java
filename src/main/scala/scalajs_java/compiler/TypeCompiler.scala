@@ -80,6 +80,7 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
     else if (isArrayType(tpe)) compileArrayType(tpe.jtype)
     else if (Predicates.isTypeParameter(tpe)) irtpe.AnyType
     else if (Predicates.isErasedParameter(tpe)) irtpe.AnyType
+    else if (Predicates.isStringType(tpe)) irtpe.ClassType("T") // irtpe.StringType
     else if (Predicates.isAutoboxedType(tpe)) compileAutoboxedType(tpe)
     else compileClassType(tpe.jtype)
   }
@@ -154,7 +155,7 @@ class TypeCompiler(mangler: Mangler, errorHanlder: ErrorHandler) {
         irtpe.ArrayType(tname, dims)
 
       case ident: Ident =>
-        if (ident.symbol.toString == "java.lang.String") irtpe.StringType
+        if (ident.symbol.toString == "java.lang.String") irtpe.ClassType("T")// irtpe.StringType
         else compileClassType(ident)  // TODO there're more cases, I guess
 
       case fa: FieldAccess =>

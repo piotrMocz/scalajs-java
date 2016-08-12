@@ -80,7 +80,13 @@ class Compiler(val inits: Map[String, Expr],
     // helper func to capture the names:
     val compConsStmt = (stmt: Statement) =>
       compileConstructorStmt(className, classType, superClassType, stmt)
-    val body = irt.Block(methodDecl.body.statements.map(compConsStmt))
+    val body = methodDecl.body match {
+      case Block(statements, _) =>
+        irt.Block(statements.map(compConsStmt))
+
+      case _ =>
+        throw new Exception(s"Unexpected constructor body: ${methodDecl.body}")
+    }
 
     val retType = methodDecl.retType.map(typeCompiler.compileType).getOrElse(irtpe.NoType)
     val params = methodDecl.params.map(compileParam)
@@ -238,7 +244,6 @@ class Compiler(val inits: Map[String, Expr],
   /** Returns both the class and its companion object */
   def compileClassDecl(classDecl: ClassDecl): irt.ClassDef = {
     implicit val pos = Utils.getPosition(classDecl)
-
 //    if (isMainClass(classDecl)) compileMainClass(classDecl)
 
     val className = encodeClassName(classDecl.name.str)
@@ -249,6 +254,8 @@ class Compiler(val inits: Map[String, Expr],
     val superClassIdent = extendsCl._1
     val superClassType = extendsCl._2
 
+    val interfaces = classDecl.implementsCl.map(e => compileExtendsClause(Option(e))._1)
+
     val members = classDecl.members.partition(Predicates.isStatic)
     val memberDefs = members._2.map(
       compileMember(classIdent, classType, superClassType, _))
@@ -256,11 +263,15 @@ class Compiler(val inits: Map[String, Expr],
     val staticMembers = members._1
     if (staticMembers.nonEmpty) compileCompanionObject(classDecl)
 
+    val classKind =
+      if (classDecl.symbol.isInterface) ir.ClassKind.Interface
+      else ir.ClassKind.Class
+
     val classDef = irt.ClassDef(
       classIdent,
-      ir.ClassKind.Class,
+      classKind,
       Some(superClassIdent),
-      Nil,                       // TODO compile interfaces
+      interfaces,
       None,
       memberDefs)(
       irt.OptimizerHints.empty)
@@ -770,6 +781,9 @@ class Compiler(val inits: Map[String, Expr],
 
       case tree: Statement =>
         compileStatement(tree)
+
+      case EmptyTree() =>
+        irt.EmptyTree
 
       case tree: CompilationUnit =>
         errorHanlder.fail(pos.line, Some("compileTree"),

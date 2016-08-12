@@ -287,7 +287,7 @@ class JTreeTraverse(val errorHanlder: ErrorHandler) {
     val params = methodDecl.getParameters.map(traverseVarDecl(_, Param)).toList
     val thrown = methodDecl.getThrows.map(traverseExpr).toList
     val retType = Option(methodDecl.getReturnType).map(traverseTree)
-    val body = traverseBlock(methodDecl.getBody)
+    val body = if (methodDecl.body == null) EmptyTree() else traverseBlock(methodDecl.getBody)
     val defVal = Option(methodDecl.defaultValue).map(traverseExpr)
 
     MethodDecl(name, symbol, modifiers, typeParams, recvParam,

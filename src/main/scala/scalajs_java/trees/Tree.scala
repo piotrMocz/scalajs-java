@@ -30,13 +30,15 @@ case class Modifiers(flags: Set[Modifier], annotations: List[Annotation])(
 case class MethodDecl(name: Name, symbol: Symbol, modifiers: Modifiers,
     typeParams: List[TypeParam], recvParam: Option[VarDecl],
     params: List[VarDecl], thrown: List[Expr], retType: Option[Tree],
-    body: Block, defVal: Option[Expr])(implicit val pos: Position) extends Tree
+    body: Tree, defVal: Option[Expr])(implicit val pos: Position) extends Tree
 
 case class TypeParam(name: Name, bounds: List[Expr],
     annotations: List[Annotation])(implicit val pos: Position) extends Tree
 
 case class CatchTree(param: VarDecl, body: Block)(
     implicit val pos: Position) extends Tree
+
+case class EmptyTree()(implicit val pos: Position) extends Tree
 
 // Expressions
 
