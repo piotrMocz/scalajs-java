@@ -113,10 +113,8 @@ class Compiler(val inits: Map[String, Expr],
 
         irt.VarRef(ident)(tpe)
 
-      case _ =>
-        errorHanlder.fail(pos.line, Some("compileParam"),
-          "Parameter reference of unknown form", Normal)
-        irt.EmptyTree
+      case expr =>
+        compileExpr(expr, exprPos = true)
     }
   }
 
