@@ -6,7 +6,7 @@ import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 import scalajs_java.Config
 import scalajs_java.compiler.passes.ConstructorPass.ConstructorsT
 import scalajs_java.trees._
-import scalajs_java.utils.Scope.ClassMapT
+import scalajs_java.utils.scope.Scope.ClassMapT
 import scalajs_java.utils.{ErrorHandler, Fatal, Predicates}
 
 class Utils(val classes: ClassMapT,

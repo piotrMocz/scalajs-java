@@ -1,60 +1,42 @@
-package scalajs_java.utils
+package scalajs_java.utils.scope
 
-import scala.collection.mutable.{Map => MMap}
-import scalajs_java.trees._
 import org.scalajs.core.ir.{Trees => irt}
 
 import scalajs_java.compiler.Utils
+import scalajs_java.trees._
+import scalajs_java.utils._
 
 sealed trait ScopeElem {
   val name: String
   val decl: Tree
   val kind: VarKind
 }
-case class VarInfo(name: String, mangled: irt.Ident, decl: VarDecl, kind: VarKind) extends ScopeElem
-case class MethodInfo(name: String, decl: MethodDecl, kind: VarKind=Method) extends ScopeElem
-case class ClassInfo(name: String, decl: ClassDecl, kind: VarKind=Class) extends ScopeElem
-case class LibraryMethod(name: String) extends ScopeElem {
-  override val decl: Tree = Skip()(Position.noPosition)
+
+sealed trait MethodElem extends ScopeElem {
   override val kind: VarKind = Method
+}
+
+case class VarInfo(name: String, mangled: irt.Ident, decl: VarDecl, kind: VarKind) extends ScopeElem
+
+case class MethodInfo(name: String, decl: MethodDecl) extends MethodElem
+
+case class ClassInfo(name: String, decl: ClassDecl, kind: VarKind=Class) extends ScopeElem
+
+case class LibraryMethod(name: String) extends MethodElem {
+  override val decl: Tree = Skip()(Position.noPosition)
 }
 
 trait Scope {
 
-  import scalajs_java.utils.Scope.ScopeT
-
   val errorHanlder: ErrorHandler
 
-  var scope: ScopeT = MMap.empty
+  var scopeState: ScopeState = ScopeState.empty
 
   val mangler = new Mangler
 
-  def addToScope(scopeElem: ScopeElem): Unit = {
-    val sym = scopeElem.name
-    if (!scope.contains(sym)) scope(sym) = Nil
+  def addToScope(scopeElem: ScopeElem): Unit = scopeState.addElem(scopeElem)
 
-    scope(sym) = scopeElem :: scope(sym)
-  }
-
-  def remFromScope(symbol: String): Unit = {
-    if (!scope.contains(symbol)) {
-      errorHanlder.fail(0, Some("remFromScope"),
-        s"Not in scope: $symbol", Normal)
-    } else {
-      if (scope(symbol).nonEmpty)
-        scope(symbol) = scope(symbol).tail
-
-      if (scope(symbol).isEmpty)
-        scope.remove(symbol)
-    }
-  }
-
-  def getFromScope(symbol: String): Option[ScopeElem] = {
-    scope.get(symbol).flatMap {
-      case head :: _ => Some(head)
-      case _         => Scope.libraryMethods.get(symbol)
-    }
-  }
+  def remFromScope(symbol: String): Unit = scopeState.remElem(symbol)
 
   def getScopeElems(members: List[Tree]): List[ScopeElem] = {
     members.collect {
@@ -69,7 +51,7 @@ trait Scope {
         VarInfo(vd.name.str, mangledName, vd, vd.kind)
 
       case md: MethodDecl =>
-        MethodInfo(md.name.str, md, Method)
+        MethodInfo(md.name.str, md)
     }
   }
 
@@ -90,29 +72,23 @@ trait Scope {
 }
 
 object Scope {
-
-  type ScopeT = MMap[String, List[ScopeElem]]
   type ClassMapT = Map[String, ClassDecl]
 
-  def empty: ScopeT = MMap.empty
+  def empty: ScopeState = ScopeState.empty
 
-  def mkScope(scopes: List[ScopeT]): ScopeT =
+  def mkScope(scopes: List[ScopeState]): ScopeState =
     scopes.reduce {_ ++ _}
 
-  def getClasses(scope: ScopeT): ClassMapT = {
-    def getClassDecls(scopeElems: List[ScopeElem]): List[ClassDecl] = {
-      scopeElems.collect { case ci: ClassInfo => ci } map(_.decl)
-    }
-
-    scope.map(scopeElem => (scopeElem._1, getClassDecls(scopeElem._2)))
+  def getClasses(scope: ScopeState): ClassMapT = {
+    scope.classes
         .filter(entry => entry._2.nonEmpty)
-        .map(entry => (entry._1, entry._2.head))
+        .map(entry => (entry._1, entry._2.head.decl))
         .toMap
   }
 
   /* TODO make only `System.out.println` a library method,
    * not every `println` */
-  val libraryMethods = Map[String, ScopeElem](
+  val libraryMethods = Map[String, MethodElem](
     "println" -> LibraryMethod("println"),
     "print" -> LibraryMethod("print")
   )

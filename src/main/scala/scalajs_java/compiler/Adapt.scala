@@ -11,8 +11,9 @@ class Adapt {
     case irtpe.FloatType   => 'F'
     case irtpe.IntType     => 'I'
     case irtpe.LongType    => 'J'
+    case irtpe.StringType  => 'T'
     case _                 => throw new Exception(
-      s"[typeTag] unknown tag")
+      s"[typeTag] unknown tag for type: $tpe")
   }
 
   def adapt(tree: Tree, targetType: irtpe.Type=irtpe.NoType): Tree = {
@@ -25,7 +26,8 @@ class Adapt {
       else targetType match {
         case cls: irtpe.ReferenceType =>
           AsInstanceOf(tree, cls)
-        case irtpe.AnyType | irtpe.UndefType | irtpe.NoType | irtpe.NothingType =>
+        case irtpe.AnyType | irtpe.UndefType | irtpe.NoType |
+             irtpe.NothingType | irtpe.StringType =>
           tree
         case tp =>
           Unbox(tree, typeCode(tp))

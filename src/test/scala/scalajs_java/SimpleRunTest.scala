@@ -13,7 +13,7 @@ import org.scalajs.core.tools.logging._
 import org.scalajs.jsenv.JSConsole
 
 import scalajs_java.compiler.passes._
-import scalajs_java.utils.Scope
+import scalajs_java.utils.scope.Scope
 
 /** Blackbox tests */
 class SimpleRunTest {

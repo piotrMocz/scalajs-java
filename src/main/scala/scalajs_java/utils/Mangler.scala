@@ -53,7 +53,8 @@ class Mangler {
       longName = base+"$"+suffix
     }
     usedLocalNames += longName
-    mangleJSName(longName)
+    val mangled = mangleJSName(longName)
+    mangled
   }
 
   def freshLocalIdent()(implicit pos: Position): irt.Ident =

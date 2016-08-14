@@ -4,12 +4,12 @@ import javax.lang.model.`type`.TypeKind
 import javax.lang.model.element.Modifier
 
 import com.sun.tools.javac.code.Symbol.{ClassSymbol, MethodSymbol, VarSymbol}
-import com.sun.tools.javac.code.{Symbol=>JSymbol, TypeTag}
+import com.sun.tools.javac.code.{TypeTag, Symbol => JSymbol}
 import com.sun.tools.javac.tree.JCTree.Tag
 import com.sun.tools.javac.util.{Name => JName}
 
 import scala.language.implicitConversions
-import scalajs_java.utils.ScopeElem
+import scalajs_java.utils.scope.{MethodElem, ScopeElem}
 
 
 // Tree
@@ -30,13 +30,15 @@ case class Modifiers(flags: Set[Modifier], annotations: List[Annotation])(
 case class MethodDecl(name: Name, symbol: Symbol, modifiers: Modifiers,
     typeParams: List[TypeParam], recvParam: Option[VarDecl],
     params: List[VarDecl], thrown: List[Expr], retType: Option[Tree],
-    body: Block, defVal: Option[Expr])(implicit val pos: Position) extends Tree
+    body: Tree, defVal: Option[Expr])(implicit val pos: Position) extends Tree
 
 case class TypeParam(name: Name, bounds: List[Expr],
     annotations: List[Annotation])(implicit val pos: Position) extends Tree
 
 case class CatchTree(param: VarDecl, body: Block)(
     implicit val pos: Position) extends Tree
+
+case class EmptyTree()(implicit val pos: Position) extends Tree
 
 // Expressions
 
@@ -146,7 +148,7 @@ case class NewArray(annotations: List[Annotation],
 sealed trait PolyExpr extends Expr
 
 case class MethodInv(methodSel: Expr, typeArgs: List[Expr], args: List[Expr],
-    tp: Type, refDecl: Option[ScopeElem]=None)(
+    tp: Type, refDecl: Option[MethodElem]=None)(
     implicit val pos: Position) extends PolyExpr
 
 case class Conditional(cond: Expr, trueExpr: Expr, falseExpr: Expr, tp: Type)(

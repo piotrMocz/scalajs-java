@@ -2,6 +2,7 @@ package scalajs_java.traversals
 
 import scalajs_java.trees._
 import scalajs_java.utils._
+import scalajs_java.utils.scope._
 
 /** Prepares an exported module scope with all
   * the public methods and fields.
@@ -13,7 +14,7 @@ class ExportedSymbolsTraverse(errHandler: ErrorHandler) extends Traverse with Sc
   private def getMemberInfos(members: List[Tree]): List[ScopeElem] = {
     members.collect {
       case md: MethodDecl if !Predicates.isPrivate(md) =>
-        MethodInfo(md.name.str, md, kind = Method)
+        MethodInfo(md.name.str, md)
 
       case vd: VarDecl if Predicates.isField(vd) && Predicates.isPrivate(vd) =>
         VarInfo(vd.name.str, null, vd, kind = ClassMember)

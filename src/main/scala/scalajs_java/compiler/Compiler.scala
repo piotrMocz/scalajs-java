@@ -8,8 +8,9 @@ import org.scalajs.core.ir.{Position, Trees => irt, Types => irtpe}
 
 import scalajs_java.compiler.passes.ConstructorPass.ConstructorsT
 import scalajs_java.trees._
-import scalajs_java.utils.Scope.ClassMapT
 import scalajs_java.utils._
+import scalajs_java.utils.scope.Scope.ClassMapT
+import scalajs_java.utils.scope._
 
 
 /** Main compiler.
@@ -80,7 +81,13 @@ class Compiler(val inits: Map[String, Expr],
     // helper func to capture the names:
     val compConsStmt = (stmt: Statement) =>
       compileConstructorStmt(className, classType, superClassType, stmt)
-    val body = irt.Block(methodDecl.body.statements.map(compConsStmt))
+    val body = methodDecl.body match {
+      case Block(statements, _) =>
+        irt.Block(statements.map(compConsStmt))
+
+      case _ =>
+        throw new Exception(s"Unexpected constructor body: ${methodDecl.body}")
+    }
 
     val retType = methodDecl.retType.map(typeCompiler.compileType).getOrElse(irtpe.NoType)
     val params = methodDecl.params.map(compileParam)
@@ -113,10 +120,8 @@ class Compiler(val inits: Map[String, Expr],
 
         irt.VarRef(ident)(tpe)
 
-      case _ =>
-        errorHanlder.fail(pos.line, Some("compileParam"),
-          "Parameter reference of unknown form", Normal)
-        irt.EmptyTree
+      case expr =>
+        compileExpr(expr, exprPos = true)
     }
   }
 
@@ -240,7 +245,6 @@ class Compiler(val inits: Map[String, Expr],
   /** Returns both the class and its companion object */
   def compileClassDecl(classDecl: ClassDecl): irt.ClassDef = {
     implicit val pos = Utils.getPosition(classDecl)
-
 //    if (isMainClass(classDecl)) compileMainClass(classDecl)
 
     val className = encodeClassName(classDecl.name.str)
@@ -251,6 +255,8 @@ class Compiler(val inits: Map[String, Expr],
     val superClassIdent = extendsCl._1
     val superClassType = extendsCl._2
 
+    val interfaces = classDecl.implementsCl.map(e => compileExtendsClause(Option(e))._1)
+
     val members = classDecl.members.partition(Predicates.isStatic)
     val memberDefs = members._2.map(
       compileMember(classIdent, classType, superClassType, _))
@@ -258,11 +264,15 @@ class Compiler(val inits: Map[String, Expr],
     val staticMembers = members._1
     if (staticMembers.nonEmpty) compileCompanionObject(classDecl)
 
+    val classKind =
+      if (classDecl.symbol.isInterface) ir.ClassKind.Interface
+      else ir.ClassKind.Class
+
     val classDef = irt.ClassDef(
       classIdent,
-      ir.ClassKind.Class,
+      classKind,
       Some(superClassIdent),
-      Nil,                       // TODO compile interfaces
+      interfaces,
       None,
       memberDefs)(
       irt.OptimizerHints.empty)
@@ -545,8 +555,9 @@ class Compiler(val inits: Map[String, Expr],
     implicit val pos = Utils.getPosition(methodSel)
 
     refDecl match {
-      case Some(methodInfo@MethodInfo(_, _, _)) =>
-        val methodName = mangler.encodeMethod(methodInfo.decl)
+      case Some(methodInfo) =>
+        val methodName = mangler.encodeMethod(
+          methodInfo.decl.asInstanceOf[MethodDecl]) // TODO
         val isStatic = Predicates.isStatic(methodInfo.decl)
 
         methodSel match {
@@ -588,7 +599,7 @@ class Compiler(val inits: Map[String, Expr],
 
       case _ =>
         errorHanlder.fail(pos.line, Some("compileMethodSelect"),
-          s"failed to determine which method does the identifier ($methodSel) refer to.",
+          s"failed to determine which method does the identifier ($methodSel) refer to ($refDecl).",
           Normal)
         irt.EmptyTree
 
@@ -772,6 +783,9 @@ class Compiler(val inits: Map[String, Expr],
 
       case tree: Statement =>
         compileStatement(tree)
+
+      case EmptyTree() =>
+        irt.EmptyTree
 
       case tree: CompilationUnit =>
         errorHanlder.fail(pos.line, Some("compileTree"),

@@ -9,7 +9,8 @@ import org.scalajs.jsenv.ConsoleJSConsole
 import scala.collection.JavaConversions._
 import scalajs_java._
 import scalajs_java.compiler.passes._
-import scalajs_java.utils.{CompilerPhase, ErrorHandler, Fatal, Scope}
+import scalajs_java.utils.scope.Scope
+import scalajs_java.utils.{CompilerPhase, ErrorHandler, Fatal}
 
 /** Aggregates all the passes into a single command */
 class CompilerPipeline(verbose: Boolean=Config.verbose) {
