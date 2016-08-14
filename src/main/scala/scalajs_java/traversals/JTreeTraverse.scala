@@ -60,7 +60,6 @@ class JTreeTraverse(val errorHanlder: ErrorHandler) {
   private def traverseExpr(expr: JCTree.JCExpression)(
       implicit pos: Position): Expr = {
 
-    val tp = JExprType(expr.`type`)
     expr match {
       case that: JCTree.LetExpr =>
         traverseLetExpr(that)

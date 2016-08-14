@@ -4,12 +4,12 @@ import javax.lang.model.`type`.TypeKind
 import javax.lang.model.element.Modifier
 
 import com.sun.tools.javac.code.Symbol.{ClassSymbol, MethodSymbol, VarSymbol}
-import com.sun.tools.javac.code.{Symbol=>JSymbol, TypeTag}
+import com.sun.tools.javac.code.{TypeTag, Symbol => JSymbol}
 import com.sun.tools.javac.tree.JCTree.Tag
 import com.sun.tools.javac.util.{Name => JName}
 
 import scala.language.implicitConversions
-import scalajs_java.utils.ScopeElem
+import scalajs_java.utils.{MethodElem, ScopeElem}
 
 
 // Tree
@@ -148,7 +148,7 @@ case class NewArray(annotations: List[Annotation],
 sealed trait PolyExpr extends Expr
 
 case class MethodInv(methodSel: Expr, typeArgs: List[Expr], args: List[Expr],
-    tp: Type, refDecl: Option[ScopeElem]=None)(
+    tp: Type, refDecl: Option[MethodElem]=None)(
     implicit val pos: Position) extends PolyExpr
 
 case class Conditional(cond: Expr, trueExpr: Expr, falseExpr: Expr, tp: Type)(

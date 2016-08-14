@@ -13,7 +13,7 @@ class ExportedSymbolsTraverse(errHandler: ErrorHandler) extends Traverse with Sc
   private def getMemberInfos(members: List[Tree]): List[ScopeElem] = {
     members.collect {
       case md: MethodDecl if !Predicates.isPrivate(md) =>
-        MethodInfo(md.name.str, md, kind = Method)
+        MethodInfo(md.name.str, md)
 
       case vd: VarDecl if Predicates.isField(vd) && Predicates.isPrivate(vd) =>
         VarInfo(vd.name.str, null, vd, kind = ClassMember)

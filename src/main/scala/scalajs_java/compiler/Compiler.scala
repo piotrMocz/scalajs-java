@@ -554,8 +554,9 @@ class Compiler(val inits: Map[String, Expr],
     implicit val pos = Utils.getPosition(methodSel)
 
     refDecl match {
-      case Some(methodInfo@MethodInfo(_, _, _)) =>
-        val methodName = mangler.encodeMethod(methodInfo.decl)
+      case Some(methodInfo) =>
+        val methodName = mangler.encodeMethod(
+          methodInfo.decl.asInstanceOf[MethodDecl]) // TODO
         val isStatic = Predicates.isStatic(methodInfo.decl)
 
         methodSel match {
@@ -597,7 +598,7 @@ class Compiler(val inits: Map[String, Expr],
 
       case _ =>
         errorHanlder.fail(pos.line, Some("compileMethodSelect"),
-          s"failed to determine which method does the identifier ($methodSel) refer to.",
+          s"failed to determine which method does the identifier ($methodSel) refer to ($refDecl).",
           Normal)
         irt.EmptyTree
 

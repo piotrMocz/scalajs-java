@@ -16,7 +16,7 @@ class ExpSymsPass(verb: Boolean=false)
   override val errorHandler: ErrorHandler =
     new ErrorHandler(CompilerPhase(name))
 
-  var scope: ScopeT = MMap.empty
+  var scope: ScopeT = ScopeT.empty
 
   val expSymTraverse = new ExportedSymbolsTraverse(errorHandler)
 
