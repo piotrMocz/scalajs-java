@@ -9,7 +9,7 @@ import com.sun.tools.javac.tree.JCTree.Tag
 import com.sun.tools.javac.util.{Name => JName}
 
 import scala.language.implicitConversions
-import scalajs_java.utils.{MethodElem, ScopeElem}
+import scalajs_java.utils.scope.{MethodElem, ScopeElem}
 
 
 // Tree

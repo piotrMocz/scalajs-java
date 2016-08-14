@@ -2,6 +2,7 @@ package scalajs_java.traversals
 
 import scalajs_java.trees._
 import scalajs_java.utils._
+import scalajs_java.utils.scope._
 
 /** Prepares an exported module scope with all
   * the public methods and fields.
