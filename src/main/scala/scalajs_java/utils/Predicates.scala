@@ -147,4 +147,7 @@ object Predicates {
     case _                => false
   }
 
+  def isAnonymousClass(classDecl: ClassDecl): Boolean =
+    classDecl.name.str.contains("$$anon$")
+
 }

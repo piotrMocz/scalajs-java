@@ -12,7 +12,8 @@ object Definitions {
   /** This is the default (no-arg) constructor for a companion object
     * that we have to include. */
   def defaultConstructor(classIdent: irt.Ident, classType: irtpe.ClassType,
-      statements: List[irt.Tree])(implicit pos: Position): irt.MethodDef = {
+      statements: List[irt.Tree], storeMod: Boolean=true)(
+      implicit pos: Position): irt.MethodDef = {
 
     val constrIdent = irt.Ident("init___", Some("<init>__"))
 
@@ -20,15 +21,20 @@ object Definitions {
       irt.This()(classType), irtpe.ClassType("O"),
       constrIdent, Nil)(irtpe.NoType)
 
-    val storeModule = irt.StoreModule(classType, irt.This()(classType))
+    val storeModule =
+      if (storeMod) List(irt.StoreModule(classType, irt.This()(classType)))
+      else Nil
 
-    val allStatements = superCall :: storeModule :: statements
+    val allStatements = superCall :: (storeModule ++ statements)
 
     irt.MethodDef(
       static = false, constrIdent, Nil, irtpe.NoType,
       irt.Block(allStatements)
     )(irt.OptimizerHints.empty, None)
   }
+
+  def defaultConstructorIdent(implicit pos: Position): irt.Ident =
+    irt.Ident("init___", Some("init__"))
 
   /** This is a very ad-hoc solution to produce a method call like:
     * method(Array()), where method :: Array[String] -> Unit */

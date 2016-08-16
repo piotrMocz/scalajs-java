@@ -55,14 +55,17 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
       sip.inits
     }
 
-    val constructors = ConstructorPass.mkConstructors(fullTrees.map { ft =>
+    val constructorsRes = fullTrees.map { ft =>
       val cp = new ConstructorPass(verbose)
-      cp.run(ft)
-      cp.constructors
-    })
+      val tree = cp.run(ft)
+      (tree, cp.constructors)
+    } unzip
 
-    val irs = (fullTrees zip initLists).map { ft =>
-      new CompilerPass(ft._2, classes, constructors, verbose).run(ft._1)
+    val constructorTrees = constructorsRes._1
+    val constructors = ConstructorPass.mkConstructors(constructorsRes._2)
+
+    val irs = (constructorTrees zip initLists).map { ct =>
+      new CompilerPass(ct._2, classes, constructors, verbose).run(ct._1)
     }
 
     val defsObjNames = irs.unzip
