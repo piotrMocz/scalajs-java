@@ -551,8 +551,9 @@ class MultifileRunTest {
 
     assertRun("42\n13",
       """
-
-
+        |Test3 test3 = new Test3();
+        |System.out.println(test3.test3());
+        |System.out.println(test3.test2());
       """.stripMargin,
       List(
         ("Test2", None, Nil,
