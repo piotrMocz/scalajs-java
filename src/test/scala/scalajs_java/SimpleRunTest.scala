@@ -45,7 +45,7 @@ class SimpleRunTest {
     esp.run(tree)
     val classes = Scope.getClasses(esp.scope)
 
-    val opTree = (new OpTraversePass).run(tree)
+    val opTree = new DesugarPass(verbose = false, classes).run(tree)
 
     val taggedTree = new RefTagPass(scope = Scope.empty).run(opTree)
 

@@ -679,12 +679,12 @@ class Compiler(val inits: Map[String, Expr],
 
           case Method =>
             errorHanlder.fail(pos.line, Some("compileStatement: VarDecl"),
-              "Expected: Method declaration, got: Variable Declaration", Normal)
+              "Expected: Method declaration, got: Variable Declaration", Fatal)
             irt.EmptyTree
 
           case Class =>
             errorHanlder.fail(pos.line, Some("compileStatement: VarDecl"),
-              "Expected: Method declaration, got: Class Declaration", Normal)
+              "Expected: Method declaration, got: Class Declaration", Fatal)
             irt.EmptyTree
         }
 

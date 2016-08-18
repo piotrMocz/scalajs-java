@@ -23,19 +23,19 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
       new JTraversePass(verbose).run(cu)
     }
 
-    val opTrees = trees.map { t =>
-      new OpTraversePass(verbose).run(t)
-    }
-
-    val treesScopes = opTrees.map { ot =>
+    val treesScopes = trees.map { t =>
       val expSymsPass = new ExpSymsPass(verbose)
-      expSymsPass.run(ot)
-      (ot, expSymsPass.scope)
+      expSymsPass.run(t)
+      (t, expSymsPass.scope)
     } unzip
 
-    val opTrees2 = treesScopes._1
+    val opTrees1 = treesScopes._1
     val scope = Scope.mkScope(treesScopes._2)
     val classes = Scope.getClasses(scope)
+
+    val opTrees2 = opTrees1.map { t =>
+      new DesugarPass(verbose, classes).run(t)
+    }
 
     val taggedTrees = opTrees2.map { ot =>
       new RefTagPass(verbose, scope).run(ot)
