@@ -614,4 +614,57 @@ class MultifileRunTest {
             |public int test() { return 42; }
           """.stripMargin, false)))
   }
+
+  @Test def runAnonymousClasses(): Unit = {
+    assertRun("42",
+      """
+        |Test2 test = new Test2() {
+        |  public int test() { return 42; }
+        |};
+        |System.out.println(test.test());
+      """.stripMargin,
+      List(
+        ("Test2", None, Nil,
+          """
+            |public int test();
+          """.stripMargin, true)))
+
+    assertRun("42",
+      """
+        |Test2 test = new Test2() {
+        |  public int test(int x) { return x; }
+        |};
+        |System.out.println(test.test(42));
+      """.stripMargin,
+      List(
+        ("Test2", None, Nil,
+          """
+            |public int test(int x);
+          """.stripMargin, true)))
+  }
+
+  @Test def runLambdas(): Unit = {
+    assertRun("42",
+      """
+        |Test2 test = () -> { return 42; };
+        |System.out.println(test.test());
+      """.stripMargin,
+      List(
+        ("Test2", None, Nil,
+          """
+            |public int test();
+          """.stripMargin, true)))
+
+    assertRun("42",
+      """
+        |Test2 test = (x) -> { return x; };
+        |System.out.println(test.test(42));
+      """.stripMargin,
+      List(
+        ("Test2", None, Nil,
+          """
+            |public int test(int x);
+          """.stripMargin, true)))
+  }
+
 }

@@ -14,7 +14,7 @@ class ConstructorPass(verb: Boolean=false) extends Pass[CompilationUnit, Compila
   private val constructorsTraverse = new ConstructorsTraverse()
 
   override def runPass(tree: CompilationUnit): CompilationUnit = {
-    val res = constructorsTraverse.traverse(tree)
+    val res = constructorsTraverse.traverseMain(tree)
     constructors = constructorsTraverse.constructors
     res
   }

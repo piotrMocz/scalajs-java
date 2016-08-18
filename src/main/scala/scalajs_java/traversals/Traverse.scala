@@ -155,7 +155,7 @@ trait Traverse {
       memberRef.tp)(memberRef.pos)
   }
 
-  def traverse(lambda: Lambda): Lambda = {
+  def traverse(lambda: Lambda): Expr = {
     Lambda(lambda.params.map(traverse), traverse(lambda.body),
       lambda.bodyKind, lambda.tp)(lambda.pos)
   }

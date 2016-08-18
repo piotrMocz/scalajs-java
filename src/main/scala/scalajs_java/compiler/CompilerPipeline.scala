@@ -23,19 +23,19 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
       new JTraversePass(verbose).run(cu)
     }
 
-    val opTrees = trees.map { t =>
-      new OpTraversePass(verbose).run(t)
-    }
-
-    val treesScopes = opTrees.map { ot =>
+    val treesScopes = trees.map { t =>
       val expSymsPass = new ExpSymsPass(verbose)
-      expSymsPass.run(ot)
-      (ot, expSymsPass.scope)
+      expSymsPass.run(t)
+      (t, expSymsPass.scope)
     } unzip
 
-    val opTrees2 = treesScopes._1
+    val opTrees1 = treesScopes._1
     val scope = Scope.mkScope(treesScopes._2)
     val classes = Scope.getClasses(scope)
+
+    val opTrees2 = opTrees1.map { t =>
+      new DesugarPass(verbose, classes).run(t)
+    }
 
     val taggedTrees = opTrees2.map { ot =>
       new RefTagPass(verbose, scope).run(ot)
@@ -55,14 +55,17 @@ class CompilerPipeline(verbose: Boolean=Config.verbose) {
       sip.inits
     }
 
-    val constructors = ConstructorPass.mkConstructors(fullTrees.map { ft =>
+    val constructorsRes = fullTrees.map { ft =>
       val cp = new ConstructorPass(verbose)
-      cp.run(ft)
-      cp.constructors
-    })
+      val tree = cp.run(ft)
+      (tree, cp.constructors)
+    } unzip
 
-    val irs = (fullTrees zip initLists).map { ft =>
-      new CompilerPass(ft._2, classes, constructors, verbose).run(ft._1)
+    val constructorTrees = constructorsRes._1
+    val constructors = ConstructorPass.mkConstructors(constructorsRes._2)
+
+    val irs = (constructorTrees zip initLists).map { ct =>
+      new CompilerPass(ct._2, classes, constructors, verbose).run(ct._1)
     }
 
     val defsObjNames = irs.unzip

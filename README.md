@@ -1,11 +1,10 @@
 # scalajs-java
+[![Build Status](https://travis-ci.org/piotrMocz/scalajs-java.svg?branch=master)](https://travis-ci.org/piotrMocz/scalajs-java)
 
 Project aims to compile Java sources into Scala.js IR
 
 **IMPORTANT**
 This project is in a _very_ early phase and is not ready to use with the rest of the Scala.js ecosystem. 
-
-[![Build Status](https://travis-ci.org/piotrMocz/scalajs-java.svg?branch=master)](https://travis-ci.org/piotrMocz/scalajs-java)
 
 ### Setup and running
 
@@ -37,11 +36,11 @@ The `scala` directory contains the compiler itself and is structured as follows:
          │   │   ├── AdaptPass.scala
          │   │   ├── CompilerPass.scala
          │   │   ├── ConstructorPass.scala
+         │   │   ├── DesugarPass.scala
          │   │   ├── EnclClassPass.scala
          │   │   ├── ErasurePass.scala
          │   │   ├── ExpSymsPass.scala
          │   │   ├── JTraversePass.scala
-         │   │   ├── OpTraversePass.scala
          │   │   ├── Pass.scala
          │   │   ├── RefTagPass.scala
          │   │   └── StaticInitsPass.scala
@@ -53,11 +52,11 @@ The `scala` directory contains the compiler itself and is structured as follows:
          ├── Runner.scala
          ├── traversals
          │   ├── ConstructorsTraverse.scala
+         │   ├── DesugarTraverse.scala
          │   ├── EnclClassTraverse.scala
          │   ├── ErasureTraverse.scala
          │   ├── ExportedSymbolsTraverse.scala
          │   ├── JTreeTraverse.scala
-         │   ├── OperationsTraverse.scala
          │   ├── RefTraverse.scala
          │   ├── StaticInitsTraverse.scala
          │   └── Traverse.scala
@@ -116,10 +115,12 @@ Right now we can compile (or include in our feature set):
 * generic classes (e.g. `class Test<T> { /* ... */ }`)
 * `extends` and `implements` mechanisms
 * reporting errors from Javac (both parsing and typechecking)
+* anonymous classes (without capture)
+* lambdas (without capture)
 
 ### TODO
 
 * refactoring of types -- we need to create our own type representation instead of re-using the one from Javac. This is because Javac's types contain a lot of information that we don't need and creating them correctly is complicated (if not impossible outside of Javac's internals). We need to create (or at least modify) the types during our erasure passes. In general, the compilers structure will be much better once we switch to our own type representation
-* compile lambdas
+* compile variable capture in lambdas and anonymous classes
 * improve generics and type erasure (type bounds, unions, wildcards, etc.)
 * ...

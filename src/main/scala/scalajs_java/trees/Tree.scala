@@ -250,13 +250,13 @@ case object Name {
     name.str
 }
 
-class Symbol(val name: String,
-             val owner: Symbol,
-             val isPrivate: Boolean=false,
-             val isLocal: Boolean=false,
-             val isStatic: Boolean=false,
-             val isConstructor: Boolean=false,
-             val isInterface: Boolean=false) {
+case class Symbol(name: String,
+             owner: Symbol,
+             isPrivate: Boolean=false,
+             isLocal: Boolean=false,
+             isStatic: Boolean=false,
+             isConstructor: Boolean=false,
+             isInterface: Boolean=false) {
 
   def flatName(): String = name
 

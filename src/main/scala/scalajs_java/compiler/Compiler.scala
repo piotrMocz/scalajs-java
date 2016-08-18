@@ -257,8 +257,17 @@ class Compiler(val inits: Map[String, Expr],
 
     val interfaces = classDecl.implementsCl.map(e => compileExtendsClause(Option(e))._1)
 
+    val anonCons = {
+      if (Predicates.isAnonymousClass(classDecl)) {
+        List(Definitions.defaultConstructor(classIdent, classType,
+          Nil, storeMod = false))
+      } else {
+        Nil
+      }
+    }
+
     val members = classDecl.members.partition(Predicates.isStatic)
-    val memberDefs = members._2.map(
+    val memberDefs = anonCons ++ members._2.map(
       compileMember(classIdent, classType, superClassType, _))
 
     val staticMembers = members._1
@@ -534,11 +543,14 @@ class Compiler(val inits: Map[String, Expr],
 
       case nc@NewClass(ident, tArgs, args, clsBody, enclExpr, tp) =>
         val clsC = typeCompiler.compileClassType(ident)
-        val ctor = utils.getMatchingConstructor(nc, constructors)
+        val ctorOpt = utils.getMatchingConstructor(nc, constructors)
         val argsC = args.map(compileExpr(_, exprPos = true))
-        val ctorName = mangler.encodeMethod(ctor)
+        val ctorIdent = ctorOpt match {
+          case Some(m) => mangler.encodeMethod(m)
+          case None    => Definitions.defaultConstructorIdent
+        }
 
-        irt.New(clsC, ctorName, argsC)
+        irt.New(clsC, ctorIdent, argsC)
 
       case polyExpr: FuncExpr => polyExpr match {
         case funcExpr: MemberRef =>
@@ -667,12 +679,12 @@ class Compiler(val inits: Map[String, Expr],
 
           case Method =>
             errorHanlder.fail(pos.line, Some("compileStatement: VarDecl"),
-              "Expected: Method declaration, got: Variable Declaration", Normal)
+              "Expected: Method declaration, got: Variable Declaration", Fatal)
             irt.EmptyTree
 
           case Class =>
             errorHanlder.fail(pos.line, Some("compileStatement: VarDecl"),
-              "Expected: Method declaration, got: Class Declaration", Normal)
+              "Expected: Method declaration, got: Class Declaration", Fatal)
             irt.EmptyTree
         }
 
