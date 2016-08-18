@@ -98,14 +98,15 @@ class Adapt {
         UnaryOp(op, convert(lhs, targetType))
 
       case BinaryOp(op, lhs, rhs) =>
-        val newTargetTp =
-          if (!lhs.tpe.equals(rhs.tpe)) {
-            if (lhs.tpe.equals(irtpe.AnyType)) rhs.tpe
-            else lhs.tpe
-          } else {
-            targetType
-          }
-        BinaryOp(op, convert(lhs, newTargetTp), convert(rhs, newTargetTp))
+        val newLeft =
+          if (lhs.tpe.equals(irtpe.AnyType)) convert(lhs, targetType)
+          else adapt(lhs)
+
+        val newRight =
+          if (rhs.tpe.equals(irtpe.AnyType)) convert(rhs, targetType)
+          else adapt(rhs)
+
+        BinaryOp(op, newLeft, newRight)
 
       case NewArray(tpe, lengths) =>
         NewArray(tpe, lengths.map(adapt(_)))
