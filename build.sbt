@@ -29,7 +29,7 @@ libraryDependencies +=
 resourceGenerators in Compile += Def.task {
   val jars = update.value.select(configurationFilter("linkingdeps"))
   for (jar <- jars) yield {
-    val dest = (resourceManaged in Compile).value / "scalajs_java" / jar.getName
+    val dest = (resourceManaged in Compile).value / "scalajs_java" / "runtime" / jar.getName
     IO.copyFile(jar, dest, preserveLastModified = true)
     dest
   }

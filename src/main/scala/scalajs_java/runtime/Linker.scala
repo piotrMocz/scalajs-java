@@ -1,4 +1,4 @@
-package scalajs_java
+package scalajs_java.runtime
 
 import org.scalajs.core.ir
 import org.scalajs.core.tools.io._

@@ -3,8 +3,8 @@ package scalajs_java.compiler
 import com.sun.tools.javac.code.TypeTag
 import org.scalajs.core.ir.{Position, Types => irtpe}
 
-import scalajs_java.Config
 import scalajs_java.compiler.passes.ConstructorPass.ConstructorsT
+import scalajs_java.runtime.Config
 import scalajs_java.trees._
 import scalajs_java.utils.scope.Scope.ClassMapT
 import scalajs_java.utils.{ErrorHandler, Fatal, Predicates}

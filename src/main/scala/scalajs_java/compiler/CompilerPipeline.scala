@@ -9,6 +9,7 @@ import org.scalajs.jsenv.ConsoleJSConsole
 import scala.collection.JavaConversions._
 import scalajs_java._
 import scalajs_java.compiler.passes._
+import scalajs_java.runtime.{Config, Linker, Runner}
 import scalajs_java.utils.scope.Scope
 import scalajs_java.utils.{CompilerPhase, ErrorHandler, Fatal}
 

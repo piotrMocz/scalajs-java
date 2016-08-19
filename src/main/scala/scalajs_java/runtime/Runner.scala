@@ -1,9 +1,8 @@
-package scalajs_java
+package scalajs_java.runtime
 
-import org.scalajs.core.tools.logging._
 import org.scalajs.core.tools.io._
 import org.scalajs.core.tools.jsdep.ResolvedJSDependency
-
+import org.scalajs.core.tools.logging._
 import org.scalajs.jsenv._
 
 /**

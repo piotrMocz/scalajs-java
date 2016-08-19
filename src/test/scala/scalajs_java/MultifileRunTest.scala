@@ -13,6 +13,7 @@ import org.scalajs.jsenv.JSConsole
 
 import scala.collection.JavaConversions._
 import scalajs_java.compiler.CompilerPipeline
+import scalajs_java.runtime.{Linker, Runner}
 
 /** Blackbox tests for multiple files */
 class MultifileRunTest {
