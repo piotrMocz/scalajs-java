@@ -12,7 +12,11 @@ object Config {
   val examples = List(
     "assignments",
     "basic_ops",
-    "control_structures"
+    "control_structures",
+    "simple_classes",
+    "static_members",
+    "arrays",
+    "interfaces"
   )
 
   val examplesCnt = examples.length
