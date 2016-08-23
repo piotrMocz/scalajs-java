@@ -16,7 +16,9 @@ object Config {
     "simple_classes",
     "static_members",
     "arrays",
-    "interfaces"
+    "interfaces",
+    "simple_generics",
+    "lambdas"
   )
 
   val examplesCnt = examples.length
