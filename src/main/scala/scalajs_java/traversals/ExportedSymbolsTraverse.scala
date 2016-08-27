@@ -16,7 +16,7 @@ class ExportedSymbolsTraverse(errHandler: ErrorHandler) extends Traverse with Sc
       case md: MethodDecl if !Predicates.isPrivate(md) =>
         MethodInfo(md.name.str, md)
 
-      case vd: VarDecl if Predicates.isField(vd) && Predicates.isPrivate(vd) =>
+      case vd: VarDecl if Predicates.isField(vd) && !Predicates.isPrivate(vd) =>
         VarInfo(vd.name.str, null, vd, kind = ClassMember)
     }
   }
