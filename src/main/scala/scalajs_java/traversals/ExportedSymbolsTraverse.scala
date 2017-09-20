@@ -22,7 +22,7 @@ class ExportedSymbolsTraverse(errHandler: ErrorHandler) extends Traverse with Sc
   }
 
   override def traverse(classDecl: ClassDecl): ClassDecl = {
-    implicit val pos = classDecl.pos
+    implicit val pos: Position = classDecl.pos
 
     if (!Predicates.isPrivate(classDecl)) {
       val expMethods = getMemberInfos(classDecl.members)

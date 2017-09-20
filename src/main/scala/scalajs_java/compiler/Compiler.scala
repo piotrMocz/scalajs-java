@@ -61,7 +61,7 @@ class Compiler(val inits: Map[String, Expr],
         case _ =>
           errorHanlder.fail(pos.line, Some("compileConstructorStmt"),
           "encountered unexpected tree", Normal)
-          irt.EmptyTree
+          irt.Null()
       }
     } else {
       compileStatement(stmt)
@@ -96,7 +96,7 @@ class Compiler(val inits: Map[String, Expr],
     val recvParam = methodDecl.recvParam.map(compileStatement)
     val typeParams = methodDecl.typeParams.map(compileTree)
 
-    irt.MethodDef(static = false, constrName, params, retType, body)(
+    irt.MethodDef(static = false, constrName, params, retType, Some(body))(
       irt.OptimizerHints.empty, None)
 
   }
@@ -137,7 +137,7 @@ class Compiler(val inits: Map[String, Expr],
     val recvParam = methodDecl.recvParam.map(compileStatement)
     val typeParams = methodDecl.typeParams.map(compileTree)
 
-    irt.MethodDef(static = false, name, params, retType, body)(
+    irt.MethodDef(static = false, name, params, retType, Some(body))(
         irt.OptimizerHints.empty, None)
   }
 
@@ -426,7 +426,7 @@ class Compiler(val inits: Map[String, Expr],
         ???
 
       case expr: TypeApply =>
-        irt.EmptyTree // TODO
+        irt.Null() // TODO
 
       case expr: ArrayTypeTree =>
         ???
@@ -488,7 +488,7 @@ class Compiler(val inits: Map[String, Expr],
           case _ =>
             errorHanlder.fail(pos.line, Some("compileExpr: Unary"),
               s"Not a know unary operation: $op", Normal)
-            irt.EmptyTree
+            irt.Null()
         }
 
       case expr: AssignOp =>
@@ -520,10 +520,10 @@ class Compiler(val inits: Map[String, Expr],
       case expr: PolyExpr =>
         compilePolyExpr(expr)
 
-      case ErrorTree(pos) =>
+      case et@ErrorTree(pos) =>
         errorHanlder.fail(pos.line, Some("compileExpr"),
           "Errors found during one of the previous phases.", Fatal)
-        irt.EmptyTree
+        irt.Null()(Utils.getPosition(et))
     }
   }
 
@@ -603,17 +603,17 @@ class Compiler(val inits: Map[String, Expr],
 
             irt.Apply(qualifier, methodName, argsC)(tpC)
 
-          case _ =>
+          case other =>
             errorHanlder.fail(pos.line, Some("compileMethodSelect"),
               "method call of unknown form (expected: Field Access)", Normal)
-            irt.EmptyTree
+            irt.Null()(Utils.getPosition(other))
         }
 
-      case _ =>
+      case other =>
         errorHanlder.fail(pos.line, Some("compileMethodSelect"),
           s"failed to determine which method does the identifier ($methodSel) refer to ($refDecl).",
           Normal)
-        irt.EmptyTree
+        irt.Null()
 
     }
   }
@@ -680,12 +680,12 @@ class Compiler(val inits: Map[String, Expr],
           case Method =>
             errorHanlder.fail(pos.line, Some("compileStatement: VarDecl"),
               "Expected: Method declaration, got: Variable Declaration", Fatal)
-            irt.EmptyTree
+            irt.Null()
 
           case Class =>
             errorHanlder.fail(pos.line, Some("compileStatement: VarDecl"),
               "Expected: Method declaration, got: Class Declaration", Fatal)
-            irt.EmptyTree
+            irt.Null()
         }
 
       case stmt: ClassDecl =>
@@ -763,10 +763,10 @@ class Compiler(val inits: Map[String, Expr],
 
         irt.DoWhile(bodyC, condC)
 
-      case ErrorTree(pos) =>
+      case et@ErrorTree(pos) =>
         errorHanlder.fail(pos.line, Some("compileExpr"),
           "Errors found during one of the previous phases.", Fatal)
-        irt.EmptyTree
+        irt.Null()(Utils.getPosition(et))
     }
   }
 
@@ -797,17 +797,17 @@ class Compiler(val inits: Map[String, Expr],
         compileStatement(tree)
 
       case EmptyTree() =>
-        irt.EmptyTree
+        irt.Null()
 
       case tree: CompilationUnit =>
         errorHanlder.fail(pos.line, Some("compileTree"),
           "Cannot have nested compilation units", Fatal)
-        irt.EmptyTree
+        irt.Null()
 
       case _ =>
         errorHanlder.fail(pos.line, Some("compileTree"),
           s"Found unknown tree: $tree", Fatal)
-        irt.EmptyTree
+        irt.Null()
     }
   }
 

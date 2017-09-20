@@ -4,12 +4,12 @@ name := "scalajs-java"
 
 version := "1.0"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.11"
 
 scalacOptions ++= Seq(
   "-deprecation", "-feature", "-unchecked", "-encoding", "utf-8")
 
-val scalaJSVersion = "0.6.8"
+val scalaJSVersion = "0.6.13"
 
 libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-reflect" % scalaVersion.value,

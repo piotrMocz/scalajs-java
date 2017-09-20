@@ -39,7 +39,7 @@ class DesugarTraverse(val errorHanlder: ErrorHandler, val classes: ClassMapT) ex
   }
 
   override def traverse(assignOp: AssignOp): Assign = {
-    implicit val pos = assignOp.pos
+    implicit val pos: Position = assignOp.pos
 
     val newOp = convertASGtoOp(assignOp.op)
     val binop = Binary(newOp, assignOp.variable,
@@ -49,7 +49,7 @@ class DesugarTraverse(val errorHanlder: ErrorHandler, val classes: ClassMapT) ex
   }
 
   override def traverse(forLoop: ForLoop): Statement = {
-    implicit val pos = forLoop.pos
+    implicit val pos: Position = forLoop.pos
 
     val cond = forLoop.cond.getOrElse(
       BooleanLiteral(value = true, JExprType(new JCPrimitiveType(TypeTag.BOOLEAN, null))))
@@ -60,7 +60,7 @@ class DesugarTraverse(val errorHanlder: ErrorHandler, val classes: ClassMapT) ex
   }
 
   override def traverse(lambda: Lambda): NewClass = {
-    implicit val pos = lambda.pos
+    implicit val pos: Position = lambda.pos
 
     lambda.tp match {
       case tp@JExprType(jtype) =>

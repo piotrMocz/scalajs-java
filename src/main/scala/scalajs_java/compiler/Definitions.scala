@@ -29,7 +29,7 @@ object Definitions {
 
     irt.MethodDef(
       static = false, constrIdent, Nil, irtpe.NoType,
-      irt.Block(allStatements)
+      Some(irt.Block(allStatements))
     )(irt.OptimizerHints.empty, None)
   }
 
@@ -78,7 +78,7 @@ object Definitions {
     ))
 
     irt.MethodDef(static = false,
-      irt.StringLiteral("main"), Nil, irtpe.AnyType, body)(
+      irt.StringLiteral("main"), Nil, irtpe.AnyType, Some(body))(
       irt.OptimizerHints.empty, None)
   }
 

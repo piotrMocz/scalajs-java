@@ -13,7 +13,7 @@ object Linker {
 
   private val libraryIRFiles = {
     // Load the standard library
-    val libraryName = "scalajs-library_2.11-0.6.8.jar"
+    val libraryName = "scalajs-library_2.11-0.6.13.jar"
     val libraryJarStream = getClass.getResourceAsStream(libraryName)
     val libraryBytes = try {
       scala.reflect.io.Streamable.bytes(libraryJarStream)

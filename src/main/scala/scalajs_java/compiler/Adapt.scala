@@ -63,9 +63,11 @@ class Adapt {
       case DoWhile(body, cond, label) =>
         DoWhile(adapt(body), adapt(cond), label)
 
-      case Try(block, errVar, handler, finalizer) =>
-        Try(adapt(block), errVar, adapt(handler),
-          adapt(finalizer))(tree.tpe)
+      case TryCatch(block, errVar, handler) =>
+        TryCatch(adapt(block), errVar, adapt(handler))(tree.tpe)
+
+      case TryFinally(block, finalizer) =>
+        TryFinally(adapt(block), adapt(finalizer))
 
       case Throw(expr) =>
         Throw(adapt(expr))
@@ -138,7 +140,7 @@ class Adapt {
       // Defs
 
       case md@MethodDef(static, name, args, resType, body) =>
-        MethodDef(static, name, args, resType, convert(body, resType))(
+        MethodDef(static, name, args, resType, body.map(convert(_, resType)))(
           md.optimizerHints, md.hash)
 
       case cd: ClassDef =>
